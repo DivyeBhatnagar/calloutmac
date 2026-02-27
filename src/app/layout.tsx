@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   description: "India's Most Competitive Esports Battleground",
 };
 
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +30,11 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} ${inter.variable} font-sans antialiased text-white bg-black`}
       >
-        {children}
+        <Header />
+        <main className="min-h-screen pt-20 bg-black text-white font-sans selection:bg-neon-green/30 selection:text-neon-green">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );
