@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AuthProvider } from "@/lib/auth-context";
 
 export default function RootLayout({
   children,
@@ -30,11 +31,13 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} ${inter.variable} font-sans antialiased text-white bg-black`}
       >
-        <Header />
-        <main className="min-h-screen pt-20 bg-black text-white font-sans selection:bg-neon-green/30 selection:text-neon-green">
-          {children}
-        </main>
-        <Footer />
+        <AuthProvider>
+          <Header />
+          <main className="min-h-screen pt-20 bg-black text-white font-sans selection:bg-neon-green/30 selection:text-neon-green">
+            {children}
+          </main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );
