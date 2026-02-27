@@ -6,8 +6,11 @@ import api from '@/lib/api';
 import GlowCard from '@/components/GlowCard';
 import NeonButton from '@/components/NeonButton';
 import Link from 'next/link';
-import { RiMailFill, RiLockPasswordFill, RiAlertFill, RiUserFill, RiPhoneFill } from 'react-icons/ri';
+import { RiMailFill, RiLockPasswordFill, RiAlertFill, RiUserFill, RiPhoneFill, RiGoogleFill } from 'react-icons/ri';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/lib/auth-context';
+import { auth, googleProvider } from '@/lib/firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -21,6 +24,7 @@ export default function RegisterPage() {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const { login } = useAuth();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -50,6 +54,29 @@ export default function RegisterPage() {
             }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGoogleRegister = async () => {
+        setIsLoading(true);
+        setError('');
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const idToken = await result.user.getIdToken();
+
+            // Backend /auth/google handles both login and registration gracefully
+            const response = await api.post('/auth/google', { idToken });
+
+            if (response.data.success) {
+                const { user, token } = response.data.data;
+                login(user, token);
+                router.push('/dashboard');
+            }
+        } catch (err: any) {
+            console.error("Google Auth Error", err);
+            setError(err.response?.data?.message || err.message || 'Google Registration Failed');
         } finally {
             setIsLoading(false);
         }
@@ -172,6 +199,22 @@ export default function RegisterPage() {
                                 {isLoading ? 'Processing...' : 'ESTABLISH LINK'}
                             </NeonButton>
                         </div>
+
+                        <div className="relative flex items-center py-2">
+                            <div className="flex-grow border-t border-white/10"></div>
+                            <span className="flex-shrink-0 mx-4 text-xs font-orbitron font-bold text-gray-500 uppercase tracking-widest">Or</span>
+                            <div className="flex-grow border-t border-white/10"></div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleGoogleRegister}
+                            disabled={isLoading}
+                            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-200 text-black font-bold font-sans py-3 px-4 rounded-lg transition-colors shadow-[0_0_15px_rgba(255,255,255,0.2)] disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                            <RiGoogleFill className="text-xl text-red-500" />
+                            <span>CONTINUE WITH GOOGLE</span>
+                        </button>
 
                         <div className="text-center pt-4 border-t border-white/10">
                             <p className="text-gray-400 text-sm">

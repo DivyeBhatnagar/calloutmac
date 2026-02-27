@@ -1,6 +1,6 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { authClient } from '../../config/firebase.client';
-import { db } from '../../config/firebase.admin';
+import { adminAuth, db } from '../../config/firebase.admin';
 
 export const authService = {
     async register(data: any) {
@@ -82,5 +82,56 @@ export const authService = {
             id: userDoc.id,
             ...userDoc.data()
         };
+    },
+
+    async googleLogin(data: any) {
+        const { idToken, username } = data; // Front-end will send Firebase ID token and optionally a username for first-time login
+        if (!idToken) throw { statusCode: 400, message: 'Google ID Token is required' };
+
+        try {
+            // Verify the ID token using the Firebase Admin SDK
+            const decodedToken = await adminAuth.verifyIdToken(idToken);
+            const { uid, email, name, picture } = decodedToken;
+
+            // Check if user exists in Firestore
+            const userDoc = await db.collection('users').doc(uid).get();
+
+            let userData;
+            if (!userDoc.exists) {
+                // If it's a new user, they need a username. If none provided, generate one from email or name
+                const finalUsername = username || (email ? email.split('@')[0] : `oper_${uid.slice(0, 5)}`);
+
+                // Ensure generated username is unique
+                const usernameQuery = await db.collection('users').where('username', '==', finalUsername).get();
+                if (!usernameQuery.empty) {
+                    throw { statusCode: 400, message: 'Username is already taken. Please choose another one.' };
+                }
+
+                userData = {
+                    username: finalUsername,
+                    email: email || '',
+                    phoneNumber: null,
+                    role: 'USER',
+                    avatar: picture || null,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                await db.collection('users').doc(uid).set(userData);
+            } else {
+                userData = userDoc.data();
+            }
+
+            return {
+                user: {
+                    id: uid,
+                    ...userData
+                },
+                token: idToken, // Re-use the Firebase ID token for our stateless session mapping
+            };
+        } catch (error: any) {
+            console.error("GOOGLE AUTH VERIFICATION FAILED. RAW ERROR:", error);
+            throw { statusCode: 401, message: 'Invalid or expired Google Token: ' + error.message };
+        }
     }
 };

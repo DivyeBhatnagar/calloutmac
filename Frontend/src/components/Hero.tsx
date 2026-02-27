@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { NeonButton } from "./ui/NeonButton";
+import Link from "next/link";
 
 export function Hero() {
     return (
@@ -38,8 +39,12 @@ export function Hero() {
                     </p>
 
                     <div className="flex flex-wrap items-center gap-4">
-                        <NeonButton variant="solid">Join Tournament</NeonButton>
-                        <NeonButton variant="outline">Explore Games</NeonButton>
+                        <Link href="/register">
+                            <NeonButton variant="solid">Join Tournament</NeonButton>
+                        </Link>
+                        <Link href="/dashboard/tournaments">
+                            <NeonButton variant="outline">Explore Games</NeonButton>
+                        </Link>
                     </div>
                 </motion.div>
 

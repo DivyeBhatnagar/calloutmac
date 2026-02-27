@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { NeonButton } from "./ui/NeonButton";
+import Link from "next/link";
 
 export function FinalCTA() {
     return (
@@ -27,9 +28,11 @@ export function FinalCTA() {
                         Join thousands of players competing daily. Build your legacy, win rewards, and become a champion.
                     </p>
 
-                    <NeonButton variant="solid" className="text-lg px-12 py-5 scale-110 shadow-[0_0_40px_rgba(0,255,102,0.8)]">
-                        ENTER ARENA
-                    </NeonButton>
+                    <Link href="/register">
+                        <NeonButton variant="solid" className="text-lg px-12 py-5 scale-110 shadow-[0_0_40px_rgba(0,255,102,0.8)]">
+                            ENTER ARENA
+                        </NeonButton>
+                    </Link>
                 </motion.div>
             </div>
 

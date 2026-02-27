@@ -19,7 +19,10 @@ if (!admin.apps.length) {
         } else {
             // Trying to initialize without cert expects GOOGLE_APPLICATION_CREDENTIALS to be set.
             // If running locally, this will likely fail unless the user sets it up.
-            admin.initializeApp();
+            // But verifyIdToken can work without a private key if we at least provide the projectId!
+            admin.initializeApp({
+                projectId: process.env.FIREBASE_PROJECT_ID || 'call-out-esports'
+            });
         }
     } catch (error) {
         console.warn("Failed to initialize Firebase Admin with specific credentials. Ensure FIREBASE_SERVICE_ACCOUNT_BASE64 or GOOGLE_APPLICATION_CREDENTIALS is set.", error);

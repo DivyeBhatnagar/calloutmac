@@ -20,6 +20,15 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
+export const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const data = await authService.googleLogin(req.body);
+        sendSuccess(res, 200, 'User authenticated with Google successfully', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const getMe = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.user.id;
