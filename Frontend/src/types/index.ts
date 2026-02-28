@@ -1,16 +1,27 @@
 export interface Tournament {
     id: string;
     name: string;
-    logoUrl?: string;
     description: string;
-    status: 'draft' | 'active' | 'closed';
+    posterUrl: string;
+    posterThumbnailUrl?: string;
+    logoUrl?: string; // keeping for backward compat
+
+    status: 'DRAFT' | 'ACTIVE' | 'CLOSED';
+
     maxSlots: number;
     paymentAmount: number;
     currentRegistrations: number;
+
+    supportedGames: Game[];
+    allowedColleges: College[];
+    collegesRestricted: boolean;
+
+    registrationDeadline?: string;
+    startDate?: string;
+    endDate?: string;
+
     createdAt: string;
     updatedAt: string;
-    colleges?: College[];
-    games?: Game[];
 }
 
 export interface College {

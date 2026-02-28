@@ -95,7 +95,8 @@ export const exportRegistrationsCSV = async (req: Request, res: Response, next: 
  */
 export const createTournament = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await adminService.createTournament(req.body);
+        const adminId = req.user.id;
+        const data = await adminService.createTournament(adminId, req.body);
         sendSuccess(res, 201, 'Tournament created', data);
     } catch (error) {
         next(error);
@@ -111,6 +112,41 @@ export const updateTournament = async (req: Request, res: Response, next: NextFu
         const id = req.params.id as string;
         const data = await adminService.updateTournament(id, req.body);
         sendSuccess(res, 200, 'Tournament updated', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const uploadTournamentPoster = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.file) throw { statusCode: 400, message: 'No file uploaded' };
+        const id = req.params.id as string;
+        const data = await adminService.uploadTournamentPoster(id, req.file);
+        sendSuccess(res, 200, 'Poster uploaded successfully', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const uploadGameLogo = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.file) throw { statusCode: 400, message: 'No file uploaded' };
+        const id = req.params.id as string;
+        const gameId = req.params.gameId as string;
+        const data = await adminService.uploadGameLogo(id, gameId, req.file);
+        sendSuccess(res, 200, 'Game logo uploaded successfully', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const uploadCollegeLogo = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.file) throw { statusCode: 400, message: 'No file uploaded' };
+        const id = req.params.id as string;
+        const collegeId = req.params.collegeId as string;
+        const data = await adminService.uploadCollegeLogo(id, collegeId, req.file);
+        sendSuccess(res, 200, 'College logo uploaded successfully', data);
     } catch (error) {
         next(error);
     }

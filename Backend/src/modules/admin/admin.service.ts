@@ -240,27 +240,74 @@ export const adminService = {
     },
 
     // ============================================================
-    // TOURNAMENT MANAGEMENT
+    // TOURNAMENT MANAGEMENT (REFACTORED)
     // ============================================================
-    async createTournament(data: any) {
-        const {
-            name, description, entryFee, paymentAmount,
-            maxSlots, status, supportedGames, allowedColleges
-        } = data;
 
-        if (!name) throw { statusCode: 400, message: 'Tournament name is required' };
+    /**
+     * Internal validation for tournament activation
+     */
+    _validateActivation(data: any) {
+        if (!data.posterUrl) throw { statusCode: 400, message: 'Activation requires a tournament poster' };
+        if (!data.supportedGames || data.supportedGames.length === 0) {
+            throw { statusCode: 400, message: 'Activation requires at least one supported game' };
+        }
+        if (!data.registrationDeadline) throw { statusCode: 400, message: 'Registration deadline is required' };
+        if (!data.startDate) throw { statusCode: 400, message: 'Start date is required' };
+
+        const deadline = new Date(data.registrationDeadline).getTime();
+        const start = new Date(data.startDate).getTime();
+
+        if (start <= deadline) {
+            throw { statusCode: 400, message: 'Tournament start date must be after the registration deadline' };
+        }
+    },
+
+    /**
+     * Basic metadata validation for any save/update
+     */
+    _validateBasicMetadata(data: any) {
+        if (!data.name?.trim()) throw { statusCode: 400, message: 'Tournament name is required' };
+        if (!data.description?.trim()) throw { statusCode: 400, message: 'Tournament description is required' };
+
+        if (data.paymentAmount < 0) throw { statusCode: 400, message: 'Payment amount cannot be negative' };
+        if (data.maxSlots < 0) throw { statusCode: 400, message: 'Max slots cannot be negative' };
+
+        if (data.collegesRestricted && (!data.allowedColleges || data.allowedColleges.length === 0)) {
+            throw { statusCode: 400, message: 'Restriction is ON but no colleges were added' };
+        }
+
+        if (data.startDate && data.endDate) {
+            if (new Date(data.endDate).getTime() <= new Date(data.startDate).getTime()) {
+                throw { statusCode: 400, message: 'End date must be after start date' };
+            }
+        }
+    },
+
+    async createTournament(adminId: string, data: any) {
+        this._validateBasicMetadata(data);
+
+        // If trying to create as ACTIVE, check activation rules
+        if (data.status === 'ACTIVE') {
+            this._validateActivation(data);
+        }
 
         const newDoc = db.collection('tournaments').doc();
         const tournamentData = {
-            name,
-            description: description || '',
-            entryFee: entryFee ?? paymentAmount ?? 0,
-            paymentAmount: paymentAmount ?? entryFee ?? 0,
-            maxSlots: maxSlots ?? 0,
+            name: data.name,
+            description: data.description,
+            posterUrl: data.posterUrl || '',
+            posterThumbnailUrl: data.posterThumbnailUrl || '',
+            supportedGames: data.supportedGames || [],
+            allowedColleges: data.allowedColleges || [],
+            collegesRestricted: !!data.collegesRestricted,
+            paymentAmount: data.paymentAmount || 0,
+            maxSlots: data.maxSlots || 0,
             currentRegistrations: 0,
-            status: status || 'active',
-            supportedGames: Array.isArray(supportedGames) ? supportedGames : [],
-            allowedColleges: Array.isArray(allowedColleges) ? allowedColleges : [],
+            status: data.status || 'DRAFT',
+            registrationDeadline: data.registrationDeadline ? admin.firestore.Timestamp.fromDate(new Date(data.registrationDeadline)) : null,
+            startDate: data.startDate ? admin.firestore.Timestamp.fromDate(new Date(data.startDate)) : null,
+            endDate: data.endDate ? admin.firestore.Timestamp.fromDate(new Date(data.endDate)) : null,
+            createdBy: adminId,
             createdAt: admin.firestore.Timestamp.now(),
             updatedAt: admin.firestore.Timestamp.now()
         };
@@ -274,18 +321,89 @@ export const adminService = {
         const tDoc = await tRef.get();
         if (!tDoc.exists) throw { statusCode: 404, message: 'Tournament not found' };
 
-        const updateData: any = { ...data, updatedAt: admin.firestore.Timestamp.now() };
+        const currentData = tDoc.data()!;
+        const mergedData = { ...currentData, ...data };
 
-        // Ensure these stay as arrays if provided
-        if (data.supportedGames && !Array.isArray(data.supportedGames)) {
-            throw { statusCode: 400, message: 'supportedGames must be an array' };
+        this._validateBasicMetadata(mergedData);
+
+        // If status is changing to ACTIVE (or is already ACTIVE), validate
+        if (mergedData.status === 'ACTIVE') {
+            this._validateActivation(mergedData);
         }
-        if (data.allowedColleges && !Array.isArray(data.allowedColleges)) {
-            throw { statusCode: 400, message: 'allowedColleges must be an array' };
-        }
+
+        const updateData: any = {
+            ...data,
+            updatedAt: admin.firestore.Timestamp.now()
+        };
+
+        // Convert dates to Timestamps if provided
+        if (data.registrationDeadline) updateData.registrationDeadline = admin.firestore.Timestamp.fromDate(new Date(data.registrationDeadline));
+        if (data.startDate) updateData.startDate = admin.firestore.Timestamp.fromDate(new Date(data.startDate));
+        if (data.endDate) updateData.endDate = admin.firestore.Timestamp.fromDate(new Date(data.endDate));
 
         await tRef.update(updateData);
         const updatedDoc = await tRef.get();
         return { id: updatedDoc.id, ...updatedDoc.data() };
+    },
+
+    async uploadTournamentPoster(id: string, file: any) {
+        const tRef = db.collection('tournaments').doc(id);
+        const tDoc = await tRef.get();
+        if (!tDoc.exists) throw { statusCode: 404, message: 'Tournament not found' };
+
+        const { StorageService } = require('../shared/storage.service');
+        const url = await StorageService.uploadFile(file.buffer, 'posters', file.mimetype);
+
+        await tRef.update({
+            posterUrl: url,
+            posterThumbnailUrl: url, // For now using same, could resize later
+            updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        return { url };
+    },
+
+    async uploadGameLogo(id: string, gameId: string, file: any) {
+        const tRef = db.collection('tournaments').doc(id);
+        const tDoc = await tRef.get();
+        if (!tDoc.exists) throw { statusCode: 404, message: 'Tournament not found' };
+
+        const data = tDoc.data()!;
+        const games = data.supportedGames || [];
+        const gameIndex = games.findIndex((g: any) => g.id === gameId);
+        if (gameIndex === -1) throw { statusCode: 404, message: 'Game not found in this tournament' };
+
+        const { StorageService } = require('../shared/storage.service');
+        const url = await StorageService.uploadFile(file.buffer, 'games', file.mimetype);
+
+        games[gameIndex].logoUrl = url;
+        await tRef.update({
+            supportedGames: games,
+            updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        return { url };
+    },
+
+    async uploadCollegeLogo(id: string, collegeId: string, file: any) {
+        const tRef = db.collection('tournaments').doc(id);
+        const tDoc = await tRef.get();
+        if (!tDoc.exists) throw { statusCode: 404, message: 'Tournament not found' };
+
+        const data = tDoc.data()!;
+        const colleges = data.allowedColleges || [];
+        const collegeIndex = colleges.findIndex((c: any) => c.id === collegeId);
+        if (collegeIndex === -1) throw { statusCode: 404, message: 'College not found in this tournament' };
+
+        const { StorageService } = require('../shared/storage.service');
+        const url = await StorageService.uploadFile(file.buffer, 'colleges', file.mimetype);
+
+        colleges[collegeIndex].logoUrl = url;
+        await tRef.update({
+            allowedColleges: colleges,
+            updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        return { url };
     }
 };

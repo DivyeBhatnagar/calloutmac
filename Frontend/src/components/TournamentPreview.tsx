@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 
 export function TournamentPreview() {
     const { data: allTournaments, loading } = useRealtimeCollection<Tournament>("tournaments", [
-        where("status", "==", "active")
+        where("status", "==", "ACTIVE")
     ]);
 
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -71,11 +71,11 @@ export function TournamentPreview() {
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex flex-col gap-2">
                                             <span className="w-fit text-xs font-mono text-black font-bold bg-neon-green border border-neon-green py-1 px-2 uppercase tracking-wide">
-                                                {tourney.games?.map((g: any) => g.name).join(', ') || "ESPORTS"}
+                                                {tourney.supportedGames?.map((g: any) => g.name).join(', ') || "ESPORTS"}
                                             </span>
-                                            {tourney.colleges && tourney.colleges.length > 0 ? (
+                                            {tourney.allowedColleges && tourney.allowedColleges.length > 0 ? (
                                                 <span className="w-fit text-xs font-mono text-black font-bold bg-yellow-400 border border-yellow-400 py-1 px-2 uppercase tracking-wide truncate max-w-[150px]">
-                                                    {tourney.colleges.map((c: any) => c.name).join(', ')}
+                                                    {tourney.allowedColleges.map((c: any) => c.name).join(', ')}
                                                 </span>
                                             ) : (
                                                 <span className="w-fit text-xs font-mono text-black font-bold bg-blue-400 border border-blue-400 py-1 px-2 uppercase tracking-wide truncate max-w-[150px]">

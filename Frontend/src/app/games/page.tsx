@@ -19,7 +19,7 @@ const GAMES = [
 
 export default function PublicGamesPage() {
     const { data: allTournaments, loading } = useRealtimeCollection<Tournament>("tournaments", [
-        where("status", "==", "active")
+        where("status", "==", "ACTIVE")
     ]);
 
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -80,8 +80,8 @@ export default function PublicGamesPage() {
                 <div className="space-y-20">
                     {GAMES.map((game, idx) => {
                         const gameTournaments = tournaments.filter(t => {
-                            if (!t.games || t.games.length === 0) return true; // Show under all if no specific game is specified
-                            return t.games.some((g: any) => {
+                            if (!t.supportedGames || t.supportedGames.length === 0) return true; // Show under all if no specific game is specified
+                            return t.supportedGames.some((g: any) => {
                                 const tName = g.name?.toLowerCase() || '';
                                 const gName = game.name.toLowerCase();
                                 return tName.includes(gName) || gName.includes(tName) || tName === 'all' || tName === 'any';
@@ -134,12 +134,12 @@ export default function PublicGamesPage() {
                                                         <div className="flex flex-col gap-2">
                                                             <span className="w-fit text-xs font-mono font-bold text-black bg-neon-green py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,102,0.4)]">
                                                                 <RiGamepadLine />
-                                                                {tourney.games?.map((g: any) => g.name).join(', ') || "ESPORTS"}
+                                                                {tourney.supportedGames?.map((g: any) => g.name).join(', ') || "ESPORTS"}
                                                             </span>
-                                                            {tourney.colleges && tourney.colleges.length > 0 ? (
+                                                            {tourney.allowedColleges && tourney.allowedColleges.length > 0 ? (
                                                                 <span className="w-fit text-xs font-mono font-bold text-black bg-yellow-400 py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(250,204,21,0.4)]">
                                                                     <RiHotelLine />
-                                                                    {tourney.colleges.map((c: any) => c.name).join(', ')}
+                                                                    {tourney.allowedColleges.map((c: any) => c.name).join(', ')}
                                                                 </span>
                                                             ) : (
                                                                 <span className="w-fit text-xs font-mono font-bold text-black bg-blue-400 py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(96,165,250,0.4)]">

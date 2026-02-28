@@ -1,629 +1,504 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRealtimeCollection } from '@/hooks/useRealtimeCollection';
-import { orderBy, doc, setDoc, updateDoc, deleteDoc, getFirestore } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { app } from '@/lib/firebase';
+import { orderBy } from 'firebase/firestore';
+import api from '@/lib/api';
 import GlowCard from '@/components/GlowCard';
-import { RiTrophyLine, RiAddLine, RiEditLine, RiDeleteBinLine, RiCloseLine, RiUploadLine, RiImageLine } from 'react-icons/ri';
-import { Tournament } from '@/types';
+import {
+    RiTrophyLine, RiAddLine, RiEditLine, RiDeleteBinLine,
+    RiCloseLine, RiUploadLine, RiImageLine, RiGamepadLine,
+    RiHotelLine, RiMoneyDollarCircleLine, RiGroupLine, RiCalendarLine,
+    RiCheckLine, RiAlertFill, RiLoader4Line
+} from 'react-icons/ri';
+import { Tournament, Game, College } from '@/types';
+import Image from 'next/image';
 
 interface TournamentForm {
     name: string;
-    logoUrl: string;
     description: string;
-    status: 'draft' | 'active' | 'closed';
+    status: 'DRAFT' | 'ACTIVE' | 'CLOSED';
     maxSlots: number;
     paymentAmount: number;
-    colleges: Array<{ id: string; name: string; logoUrl?: string }>;
-    games: Array<{ id: string; name: string; logoUrl?: string }>;
+    collegesRestricted: boolean;
+    allowedColleges: College[];
+    supportedGames: Game[];
+    registrationDeadline: string;
+    startDate: string;
+    endDate: string;
+    posterUrl: string;
 }
 
 export default function AdminTournamentsPage() {
     const [showModal, setShowModal] = useState(false);
     const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
     const [saving, setSaving] = useState(false);
-    
+    const [error, setError] = useState('');
+
     const [form, setForm] = useState<TournamentForm>({
         name: '',
-        logoUrl: '',
         description: '',
-        status: 'draft',
+        status: 'DRAFT',
         maxSlots: 0,
         paymentAmount: 0,
-        colleges: [],
-        games: []
+        collegesRestricted: false,
+        allowedColleges: [],
+        supportedGames: [],
+        registrationDeadline: '',
+        startDate: '',
+        endDate: '',
+        posterUrl: ''
     });
 
-    const [collegeName, setCollegeName] = useState('');
-    const [collegeLogoFile, setCollegeLogoFile] = useState<File | null>(null);
-    const [gameName, setGameName] = useState('');
-    const [gameLogoFile, setGameLogoFile] = useState<File | null>(null);
-    const [tournamentLogoFile, setTournamentLogoFile] = useState<File | null>(null);
+    const [tempCollegeName, setTempCollegeName] = useState('');
+    const [tempGameName, setTempGameName] = useState('');
+    const [uploadingImage, setUploadingImage] = useState<string | null>(null); // ID of game/college or 'poster'
 
     const { data: tournaments, loading } = useRealtimeCollection<Tournament>('tournaments', [
         orderBy('createdAt', 'desc')
     ]);
 
     const stats = useMemo(() => {
-        const total = tournaments.length;
-        const active = tournaments.filter(t => t.status === 'active').length;
-        const draft = tournaments.filter(t => t.status === 'draft').length;
-        const closed = tournaments.filter(t => t.status === 'closed').length;
-        return { total, active, draft, closed };
+        return {
+            total: tournaments.length,
+            active: tournaments.filter(t => t.status === 'ACTIVE').length,
+            draft: tournaments.filter(t => t.status === 'DRAFT').length,
+            closed: tournaments.filter(t => t.status === 'CLOSED').length
+        };
     }, [tournaments]);
 
     const openCreateModal = () => {
         setEditingTournament(null);
         setForm({
             name: '',
-            logoUrl: '',
             description: '',
-            status: 'draft',
+            status: 'DRAFT',
             maxSlots: 0,
             paymentAmount: 0,
-            colleges: [],
-            games: []
+            collegesRestricted: false,
+            allowedColleges: [],
+            supportedGames: [],
+            registrationDeadline: '',
+            startDate: '',
+            endDate: '',
+            posterUrl: ''
         });
-        setTournamentLogoFile(null);
+        setError('');
         setShowModal(true);
     };
 
-    const openEditModal = (tournament: Tournament) => {
-        setEditingTournament(tournament);
+    const openEditModal = (t: Tournament) => {
+        setEditingTournament(t);
         setForm({
-            name: tournament.name,
-            logoUrl: tournament.logoUrl || '',
-            description: tournament.description,
-            status: tournament.status,
-            maxSlots: tournament.maxSlots,
-            paymentAmount: tournament.paymentAmount,
-            colleges: tournament.colleges || [],
-            games: tournament.games || []
+            name: t.name,
+            description: t.description,
+            status: t.status,
+            maxSlots: t.maxSlots,
+            paymentAmount: t.paymentAmount,
+            collegesRestricted: !!t.collegesRestricted,
+            allowedColleges: t.allowedColleges || [],
+            supportedGames: t.supportedGames || [],
+            registrationDeadline: t.registrationDeadline ? t.registrationDeadline.split('T')[0] : '',
+            startDate: t.startDate ? t.startDate.split('T')[0] : '',
+            endDate: t.endDate ? t.endDate.split('T')[0] : '',
+            posterUrl: t.posterUrl || ''
         });
-        setTournamentLogoFile(null);
+        setError('');
         setShowModal(true);
     };
 
-    const uploadImage = async (file: File, path: string): Promise<string> => {
-        const storage = getStorage(app);
-        const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        return await getDownloadURL(storageRef);
-    };
+    // ─── HANDLERS ──────────────────────────────────────────────────────────
 
-    const addCollege = async () => {
-        if (!collegeName.trim()) {
-            alert('College name is required');
-            return;
-        }
-
-        let logoUrl: string | undefined = undefined;
-        if (collegeLogoFile) {
-            try {
-                logoUrl = await uploadImage(collegeLogoFile, 'colleges');
-            } catch (error) {
-                console.error('Error uploading college logo:', error);
-                alert('Failed to upload college logo');
-                return;
-            }
-        }
-
-        const newCollege = {
-            id: `college_${Date.now()}`,
-            name: collegeName,
-            logoUrl
-        };
-
-        setForm(prev => ({
-            ...prev,
-            colleges: [...prev.colleges, newCollege]
-        }));
-
-        setCollegeName('');
-        setCollegeLogoFile(null);
-    };
-
-    const removeCollege = (id: string) => {
-        setForm(prev => ({
-            ...prev,
-            colleges: prev.colleges.filter(c => c.id !== id)
-        }));
-    };
-
-    const addGame = async () => {
-        if (!gameName.trim()) {
-            alert('Game name is required');
-            return;
-        }
-
-        let logoUrl: string | undefined = undefined;
-        if (gameLogoFile) {
-            try {
-                logoUrl = await uploadImage(gameLogoFile, 'games');
-            } catch (error) {
-                console.error('Error uploading game logo:', error);
-                alert('Failed to upload game logo');
-                return;
-            }
-        }
-
-        const newGame = {
+    const addLocalGame = () => {
+        if (!tempGameName.trim()) return;
+        const newGame: Game = {
             id: `game_${Date.now()}`,
-            name: gameName,
-            logoUrl
+            name: tempGameName,
+            logoUrl: ''
         };
-
-        setForm(prev => ({
-            ...prev,
-            games: [...prev.games, newGame]
-        }));
-
-        setGameName('');
-        setGameLogoFile(null);
+        setForm(f => ({ ...f, supportedGames: [...f.supportedGames, newGame] }));
+        setTempGameName('');
     };
 
-    const removeGame = (id: string) => {
-        setForm(prev => ({
-            ...prev,
-            games: prev.games.filter(g => g.id !== id)
-        }));
+    const addLocalCollege = () => {
+        if (!tempCollegeName.trim()) return;
+        const newCollege: College = {
+            id: `college_${Date.now()}`,
+            name: tempCollegeName,
+            logoUrl: ''
+        };
+        setForm(f => ({ ...f, allowedColleges: [...f.allowedColleges, newCollege] }));
+        setTempCollegeName('');
     };
 
-    const handleSave = async (publishNow: boolean = false) => {
-        // Validation
-        if (!form.name.trim()) {
-            alert('Tournament name is required');
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'poster' | 'game' | 'college', targetId?: string) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Only image files (PNG, JPG, JPEG) are allowed.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Max file size is 5MB.');
             return;
         }
 
-        if (form.games.length === 0) {
-            alert('At least one game is required');
-            return;
+        // If we are editing, we can upload immediately
+        if (editingTournament) {
+            setUploadingImage(targetId || type);
+            const formData = new FormData();
+            try {
+                let url = '';
+                if (type === 'poster') {
+                    formData.append('poster', file);
+                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/poster`, formData);
+                    url = res.data.data.url;
+                    setForm(f => ({ ...f, posterUrl: url }));
+                } else if (type === 'game' && targetId) {
+                    formData.append('logo', file);
+                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/games/${targetId}/logo`, formData);
+                    url = res.data.data.url;
+                    setForm(f => ({
+                        ...f,
+                        supportedGames: f.supportedGames.map(g => g.id === targetId ? { ...g, logoUrl: url } : g)
+                    }));
+                } else if (type === 'college' && targetId) {
+                    formData.append('logo', file);
+                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/colleges/${targetId}/logo`, formData);
+                    url = res.data.data.url;
+                    setForm(f => ({
+                        ...f,
+                        allowedColleges: f.allowedColleges.map(c => c.id === targetId ? { ...c, logoUrl: url } : c)
+                    }));
+                }
+            } catch (err: any) {
+                alert(err.response?.data?.message || 'Upload failed');
+            } finally {
+                setUploadingImage(null);
+            }
+        } else {
+            // For new tournament, handle previews locally or alert user to save draft first
+            alert('Please save the tournament as DRAFT first to enable image uploads.');
+        }
+    };
+
+    const validateActivation = () => {
+        if (!form.posterUrl) return 'Activation requires a poster banner.';
+        if (form.supportedGames.length === 0) return 'At least one supported game is required.';
+        if (!form.registrationDeadline) return 'Registration deadline is required for activation.';
+        if (!form.startDate) return 'Start date is required for activation.';
+
+        const deadline = new Date(form.registrationDeadline).getTime();
+        const start = new Date(form.startDate).getTime();
+        if (start <= deadline) return 'Start date must be after registration deadline.';
+
+        return null;
+    };
+
+    const handleSave = async (targetStatus?: 'ACTIVE' | 'DRAFT') => {
+        setError('');
+
+        if (!form.name.trim()) { setError('Tournament name is required.'); return; }
+        if (!form.description.trim()) { setError('Description is required.'); return; }
+        if (form.collegesRestricted && form.allowedColleges.length === 0) {
+            setError('College restriction is ON but no colleges added.'); return;
         }
 
-        if (form.maxSlots < 0 || form.maxSlots > 1000) {
-            alert('Max slots must be between 0 and 1000');
-            return;
-        }
-
-        if (form.paymentAmount < 0 || form.paymentAmount > 100000) {
-            alert('Payment amount must be between 0 and 100,000');
-            return;
+        if (targetStatus === 'ACTIVE') {
+            const vErr = validateActivation();
+            if (vErr) { setError(vErr); return; }
         }
 
         setSaving(true);
         try {
-            const db = getFirestore(app);
-            
-            let logoUrl = form.logoUrl;
-            if (tournamentLogoFile) {
-                logoUrl = await uploadImage(tournamentLogoFile, 'tournaments');
-            }
-
-            const tournamentData = {
-                name: form.name,
-                logoUrl,
-                description: form.description,
-                status: publishNow ? 'active' : form.status,
-                maxSlots: form.maxSlots,
-                paymentAmount: form.paymentAmount,
-                currentRegistrations: editingTournament?.currentRegistrations || 0,
-                colleges: form.colleges,
-                games: form.games,
-                updatedAt: new Date().toISOString()
+            const payload = {
+                ...form,
+                status: targetStatus || form.status
             };
 
             if (editingTournament) {
-                // Update existing tournament
-                await updateDoc(doc(db, 'tournaments', editingTournament.id), tournamentData);
-                alert('Tournament updated successfully!');
+                await api.patch(`/admin/tournaments/${editingTournament.id}`, payload);
             } else {
-                // Create new tournament
-                const newDocRef = doc(db, 'tournaments', `tournament_${Date.now()}`);
-                await setDoc(newDocRef, {
-                    ...tournamentData,
-                    createdAt: new Date().toISOString()
-                });
-                alert('Tournament created successfully!');
+                const res = await api.post('/admin/tournaments', payload);
+                // After creating, we can open edit mode to allow uploads
+                setEditingTournament(res.data.data);
+                alert('Tournament created as DRAFT. You can now upload images.');
             }
-
             setShowModal(false);
-        } catch (error) {
-            console.error('Error saving tournament:', error);
-            alert('Failed to save tournament. Please try again.');
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Failed to save tournament');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleDelete = async (tournament: Tournament) => {
-        if (tournament.currentRegistrations > 0) {
+    const handleDelete = async (t: Tournament) => {
+        if (t.currentRegistrations > 0) {
             alert('Cannot delete tournament with existing registrations');
             return;
         }
-
-        if (!confirm(`Are you sure you want to delete "${tournament.name}"?`)) {
-            return;
-        }
+        if (!confirm(`Are you sure you want to delete "${t.name}"?`)) return;
 
         try {
-            const db = getFirestore(app);
-            await deleteDoc(doc(db, 'tournaments', tournament.id));
-            alert('Tournament deleted successfully!');
-        } catch (error) {
-            console.error('Error deleting tournament:', error);
-            alert('Failed to delete tournament');
+            await api.delete(`/admin/tournaments/${t.id}`);
+            alert('Tournament deleted successfully');
+        } catch (err) {
+            alert('Delete failed');
         }
     };
 
+    // ─── RENDER ────────────────────────────────────────────────────────────
+
     if (loading) {
         return (
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="animate-pulse h-24 bg-white/5 rounded-xl"></div>
-                    ))}
-                </div>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <RiLoader4Line className="text-4xl text-neon-green animate-spin" />
+                <p className="text-gray-500 font-orbitron tracking-widest uppercase">Loading Arena...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-center justify-between">
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-orbitron font-bold text-white tracking-wider glow-text mb-2">
-                        TOURNAMENT MANAGEMENT
+                    <h1 className="text-3xl font-orbitron font-bold text-white tracking-widest glow-text mb-2 flex items-center gap-3">
+                        <RiTrophyLine className="text-neon-green" /> TOURNAMENT ARENA
                     </h1>
-                    <p className="text-gray-400">Create and manage tournaments • {tournaments.length} total</p>
+                    <p className="text-gray-400 text-sm">Create, configure and manage your esports events • {tournaments.length} total</p>
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-2 px-6 py-3 bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg hover:bg-neon-green/30 transition-colors font-semibold"
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-neon-green text-black rounded-xl font-bold transition-all hover:scale-105 shadow-[0_0_20px_rgba(0,255,102,0.2)]"
                 >
-                    <RiAddLine className="text-xl" /> Create Tournament
+                    <RiAddLine className="text-xl" /> CREATE TOURNAMENT
                 </button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <GlowCard>
-                    <div>
-                        <p className="text-gray-400 text-sm uppercase mb-1">Total</p>
-                        <h3 className="text-2xl font-bold text-white">{stats.total}</h3>
-                    </div>
-                </GlowCard>
-                <GlowCard>
-                    <div>
-                        <p className="text-gray-400 text-sm uppercase mb-1">Active</p>
-                        <h3 className="text-2xl font-bold text-neon-green">{stats.active}</h3>
-                    </div>
-                </GlowCard>
-                <GlowCard>
-                    <div>
-                        <p className="text-gray-400 text-sm uppercase mb-1">Draft</p>
-                        <h3 className="text-2xl font-bold text-yellow-400">{stats.draft}</h3>
-                    </div>
-                </GlowCard>
-                <GlowCard>
-                    <div>
-                        <p className="text-gray-400 text-sm uppercase mb-1">Closed</p>
-                        <h3 className="text-2xl font-bold text-gray-400">{stats.closed}</h3>
-                    </div>
-                </GlowCard>
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard label="Total" value={stats.total} />
+                <StatCard label="Active" value={stats.active} color="text-neon-green" />
+                <StatCard label="Draft" value={stats.draft} color="text-yellow-400" />
+                <StatCard label="Closed" value={stats.closed} color="text-red-400" />
             </div>
 
-            {/* Tournaments List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tournaments.length === 0 ? (
-                    <div className="col-span-full text-center py-12 border border-white/10 rounded-xl bg-black/40 backdrop-blur-sm">
-                        <p className="text-gray-500">No tournaments yet. Create your first tournament!</p>
-                    </div>
-                ) : (
-                    tournaments.map((tournament, idx) => (
-                        <GlowCard key={tournament.id} delay={idx * 0.05}>
-                            <div className="space-y-4">
-                                {tournament.logoUrl && (
-                                    <img src={tournament.logoUrl} alt={tournament.name} className="w-full h-40 object-cover rounded-lg" />
-                                )}
-                                <div>
-                                    <div className="flex items-start justify-between mb-2">
-                                        <h3 className="text-lg font-bold text-white">{tournament.name}</h3>
-                                        <span className={`px-2 py-1 text-xs font-bold rounded uppercase ${
-                                            tournament.status === 'active' ? 'bg-neon-green/20 text-neon-green' :
-                                            tournament.status === 'draft' ? 'bg-yellow-500/20 text-yellow-500' :
-                                            'bg-gray-500/20 text-gray-400'
-                                        }`}>
-                                            {tournament.status}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-gray-400 line-clamp-2 mb-3">{tournament.description}</p>
-                                    
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">Registrations:</span>
-                                            <span className="text-white font-semibold">
-                                                {tournament.currentRegistrations}/{tournament.maxSlots || '∞'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">Entry Fee:</span>
-                                            <span className="text-neon-green font-semibold">
-                                                {tournament.paymentAmount === 0 ? '🎉 Free' : `₹${tournament.paymentAmount}`}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">Games:</span>
-                                            <span className="text-white">{tournament.games?.length || 0}</span>
-                                        </div>
-                                        {tournament.colleges && tournament.colleges.length > 0 ? (
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-500">Colleges:</span>
-                                                <span className="text-white">{tournament.colleges.length}</span>
-                                            </div>
-                                        ) : (
-                                            <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">Open Tournament</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2 pt-3 border-t border-white/10">
-                                    <button
-                                        onClick={() => openEditModal(tournament)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors text-white"
-                                    >
-                                        <RiEditLine /> Edit
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(tournament)}
-                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg transition-colors text-red-400"
-                                        disabled={tournament.currentRegistrations > 0}
-                                    >
-                                        <RiDeleteBinLine />
-                                    </button>
-                                </div>
-                            </div>
-                        </GlowCard>
-                    ))
-                )}
+            {/* List */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {tournaments.map((t, i) => (
+                    <TournamentCard key={t.id} tournament={t} onEdit={() => openEditModal(t)} onDelete={() => handleDelete(t)} delay={i * 0.05} />
+                ))}
             </div>
 
-            {/* Create/Edit Modal */}
+            {/* MODAL */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
-                    onClick={() => setShowModal(false)}>
-                    <div className="bg-gray-900 border border-white/20 rounded-xl max-w-4xl w-full my-8"
-                        onClick={(e) => e.stopPropagation()}>
-                        <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-gray-900 z-10">
-                            <h2 className="text-2xl font-orbitron font-bold text-white">
-                                {editingTournament ? 'Edit Tournament' : 'Create Tournament'}
-                            </h2>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
-                                <RiCloseLine className="text-2xl" />
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-orbitron font-bold text-white flex items-center gap-3">
+                                    {editingTournament ? <RiEditLine className="text-neon-green" /> : <RiAddLine className="text-neon-green" />}
+                                    {editingTournament ? 'REFINE TOURNAMENT' : 'INITIALIZE TOURNAMENT'}
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">
+                                    {editingTournament ? `CONFIGURING ${editingTournament.id}` : 'SETTING UP BASE METADATA'}
+                                </p>
+                            </div>
+                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                                <RiCloseLine className="text-2xl text-gray-400" />
                             </button>
                         </div>
-                        
-                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-                            {/* Basic Details */}
-                            <div>
-                                <h3 className="text-lg font-bold text-white mb-4">Basic Details</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Tournament Name *</label>
-                                        <input
-                                            type="text"
-                                            value={form.name}
-                                            onChange={(e) => setForm({...form, name: e.target.value})}
-                                            placeholder="e.g., Campus Showdown 2024"
-                                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-neon-green/50"
-                                        />
-                                    </div>
 
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Tournament Logo</label>
-                                        <div className="flex items-center gap-4">
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setTournamentLogoFile(e.target.files?.[0] || null)}
-                                                className="hidden"
-                                                id="tournament-logo"
-                                            />
-                                            <label
-                                                htmlFor="tournament-logo"
-                                                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg cursor-pointer transition-colors text-white"
-                                            >
-                                                <RiUploadLine /> Upload Logo
-                                            </label>
-                                            {(tournamentLogoFile || form.logoUrl) && (
-                                                <span className="text-sm text-gray-400">
-                                                    {tournamentLogoFile ? tournamentLogoFile.name : 'Current logo set'}
-                                                </span>
+                        {/* Modal Body */}
+                        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-10 custom-scrollbar">
+                            {error && (
+                                <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl flex items-center gap-3 text-red-500 text-sm animate-in shake duration-300">
+                                    <RiAlertFill className="text-xl flex-shrink-0" />
+                                    <p className="font-bold">{error}</p>
+                                </div>
+                            )}
+
+                            {/* Section 1 — Basics */}
+                            <FormSection title="1. Basic Details" icon={RiTrophyLine}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <Field label="Tournament Name *">
+                                        <input className={inputCls} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Holi Arena 2026" />
+                                    </Field>
+                                    <div className="md:col-span-2">
+                                        <Field label="Description *">
+                                            <textarea className={inputCls + ' min-h-[100px] py-3'} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Write about the event, rules, rewards..." />
+                                        </Field>
+                                    </div>
+                                    <Field label="Registration Deadline *">
+                                        <div className="relative">
+                                            <RiCalendarLine className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                                            <input type="date" className={inputCls + ' pl-10 [color-scheme:dark]'} value={form.registrationDeadline} onChange={e => setForm({ ...form, registrationDeadline: e.target.value })} />
+                                        </div>
+                                    </Field>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Field label="Start Date *">
+                                            <input type="date" className={inputCls + ' [color-scheme:dark]'} value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} />
+                                        </Field>
+                                        <Field label="End Date *">
+                                            <input type="date" className={inputCls + ' [color-scheme:dark]'} value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </FormSection>
+
+                            {/* Section 2 — Poster */}
+                            <FormSection title="2. Branding & Assets" icon={RiImageLine}>
+                                <div className="space-y-4">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tournament Poster (PNG/JPG, Max 5MB)</label>
+                                    <div className="flex flex-col sm:flex-row gap-6 items-start">
+                                        <div className={`w-full sm:w-64 aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center relative overflow-hidden transition-all
+                                            ${form.posterUrl ? 'border-neon-green/30 bg-neon-green/5' : 'border-white/10 bg-white/3'}`}>
+                                            {form.posterUrl ? (
+                                                <img src={form.posterUrl} alt="Poster" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <RiImageLine className="text-4xl text-gray-700 mb-2" />
+                                            )}
+                                            {uploadingImage === 'poster' && (
+                                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                    <RiLoader4Line className="text-3xl text-neon-green animate-spin" />
+                                                </div>
                                             )}
                                         </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Description</label>
-                                        <textarea
-                                            value={form.description}
-                                            onChange={(e) => setForm({...form, description: e.target.value})}
-                                            placeholder="Tournament details, rules, prizes..."
-                                            rows={3}
-                                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-neon-green/50"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-2">Status *</label>
-                                            <select
-                                                value={form.status}
-                                                onChange={(e) => setForm({...form, status: e.target.value as any})}
-                                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-neon-green/50"
-                                            >
-                                                <option value="draft">Draft</option>
-                                                <option value="active">Active</option>
-                                                <option value="closed">Closed</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-2">Max Slots (0 = Unlimited) *</label>
-                                            <input
-                                                type="number"
-                                                value={form.maxSlots}
-                                                onChange={(e) => setForm({...form, maxSlots: parseInt(e.target.value) || 0})}
-                                                min="0"
-                                                max="1000"
-                                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-neon-green/50"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-2">Entry Fee (₹) *</label>
-                                            <input
-                                                type="number"
-                                                value={form.paymentAmount}
-                                                onChange={(e) => setForm({...form, paymentAmount: parseInt(e.target.value) || 0})}
-                                                min="0"
-                                                max="100000"
-                                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-neon-green/50"
-                                            />
+                                        <div className="flex-1 space-y-3">
+                                            <p className="text-sm text-gray-400">Upload a high-quality poster for the tournament landing page.</p>
+                                            <input type="file" id="poster-upload" className="hidden" accept="image/*" onChange={e => handleFileChange(e, 'poster')} disabled={!editingTournament} />
+                                            <label htmlFor="poster-upload" className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all
+                                                ${editingTournament ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-white/5 text-gray-600 cursor-not-allowed'}`}>
+                                                <RiUploadLine className="text-lg" /> {form.posterUrl ? 'REPLACE POSTER' : 'UPLOAD POSTER'}
+                                            </label>
+                                            {!editingTournament && <p className="text-[10px] text-yellow-500/60 font-medium">Save as DRAFT first to enable uploads.</p>}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </FormSection>
 
-                            {/* Colleges Section */}
-                            <div>
-                                <h3 className="text-lg font-bold text-white mb-4">College Setup (Optional)</h3>
-                                <p className="text-sm text-gray-400 mb-4">Leave empty for open tournaments. Add colleges to restrict registration.</p>
-                                
-                                <div className="space-y-4">
-                                    <div className="flex gap-4">
-                                        <input
-                                            type="text"
-                                            value={collegeName}
-                                            onChange={(e) => setCollegeName(e.target.value)}
-                                            placeholder="College name"
-                                            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-neon-green/50"
-                                        />
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(e) => setCollegeLogoFile(e.target.files?.[0] || null)}
-                                            className="hidden"
-                                            id="college-logo"
-                                        />
-                                        <label
-                                            htmlFor="college-logo"
-                                            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg cursor-pointer transition-colors text-white"
-                                        >
-                                            <RiImageLine /> Logo
-                                        </label>
+                            {/* Section 3 — Games */}
+                            <FormSection title="3. Game Configuration" icon={RiGamepadLine}>
+                                <div className="space-y-6">
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <input className={inputCls + ' flex-1'} placeholder="Add Game Name (e.g. BGMI)" value={tempGameName} onChange={e => setTempGameName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addLocalGame()} />
+                                        <button onClick={addLocalGame} className="px-6 py-2 bg-neon-green/10 text-neon-green border border-neon-green/30 rounded-xl font-bold hover:bg-neon-green/20 transition-all flex items-center justify-center gap-2">
+                                            <RiAddLine className="text-xl" /> ADD GAME
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {form.supportedGames.map(game => (
+                                            <div key={game.id} className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-center gap-4 group">
+                                                <div className="w-12 h-12 rounded-lg bg-black border border-white/10 flex items-center justify-center relative overflow-hidden flex-shrink-0">
+                                                    {game.logoUrl ? <img src={game.logoUrl} className="w-full h-full object-contain" /> : <RiGamepadLine className="text-gray-700 text-xl" />}
+                                                    {uploadingImage === game.id && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><RiLoader4Line className="text-neon-green animate-spin" /></div>}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-white truncate">{game.name}</p>
+                                                    <div className="flex items-center gap-3 mt-1">
+                                                        <input type="file" id={`game-${game.id}`} className="hidden" accept="image/*" onChange={e => handleFileChange(e, 'game', game.id)} disabled={!editingTournament} />
+                                                        <label htmlFor={`game-${game.id}`} className={`text-[10px] font-bold tracking-wider uppercase transition-colors
+                                                            ${editingTournament ? 'text-neon-green/60 hover:text-neon-green cursor-pointer' : 'text-gray-700 pointer-events-none'}`}>
+                                                            {game.logoUrl ? 'Update Logo' : 'Upload Logo'}
+                                                        </label>
+                                                        <button onClick={() => setForm(f => ({ ...f, supportedGames: f.supportedGames.filter(g => g.id !== game.id) }))} className="text-[10px] font-bold tracking-wider uppercase text-red-500/60 hover:text-red-500 transition-colors">Remove</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </FormSection>
+
+                            {/* Section 4 — Colleges */}
+                            <FormSection title="4. Participation Scope" icon={RiHotelLine}>
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between p-4 bg-white/3 border border-white/8 rounded-xl">
+                                        <div>
+                                            <p className="font-bold text-white text-sm">Restrict to Selected Colleges</p>
+                                            <p className="text-xs text-gray-500">Only players from the list can register.</p>
+                                        </div>
                                         <button
-                                            onClick={addCollege}
-                                            className="px-6 py-2 bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg hover:bg-neon-green/30 transition-colors"
+                                            onClick={() => setForm(f => ({ ...f, collegesRestricted: !f.collegesRestricted }))}
+                                            className={`w-12 h-6 rounded-full transition-all relative ${form.collegesRestricted ? 'bg-neon-green' : 'bg-white/10'}`}
                                         >
-                                            Add College
+                                            <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${form.collegesRestricted ? 'left-7' : 'left-1'}`} />
                                         </button>
                                     </div>
 
-                                    {form.colleges.length > 0 && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {form.colleges.map(college => (
-                                                <div key={college.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                                                    {college.logoUrl && (
-                                                        <img src={college.logoUrl} alt={college.name} className="w-10 h-10 object-cover rounded" />
-                                                    )}
-                                                    <span className="flex-1 text-white">{college.name}</span>
-                                                    <button
-                                                        onClick={() => removeCollege(college.id)}
-                                                        className="text-red-400 hover:text-red-300"
-                                                    >
-                                                        <RiCloseLine className="text-xl" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                    {form.collegesRestricted && (
+                                        <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <input className={inputCls + ' flex-1'} placeholder="College Name (e.g. IIT Delhi)" value={tempCollegeName} onChange={e => setTempCollegeName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addLocalCollege()} />
+                                                <button onClick={addLocalCollege} className="px-6 py-2 bg-white/5 text-white border border-white/10 rounded-xl font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                                                    <RiAddLine className="text-xl" /> ADD COLLEGE
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {form.allowedColleges.map(col => (
+                                                    <div key={col.id} className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-lg bg-black border border-white/10 flex items-center justify-center relative overflow-hidden flex-shrink-0">
+                                                            {col.logoUrl ? <img src={col.logoUrl} className="w-full h-full object-contain" /> : <RiHotelLine className="text-gray-700 text-xl" />}
+                                                            {uploadingImage === col.id && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><RiLoader4Line className="text-neon-green animate-spin" /></div>}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-bold text-white truncate">{col.name}</p>
+                                                            <div className="flex items-center gap-3 mt-1">
+                                                                <input type="file" id={`col-${col.id}`} className="hidden" accept="image/*" onChange={e => handleFileChange(e, 'college', col.id)} disabled={!editingTournament} />
+                                                                <label htmlFor={`col-${col.id}`} className={`text-[10px] font-bold tracking-wider uppercase transition-colors
+                                                                    ${editingTournament ? 'text-neon-green/60 hover:text-neon-green cursor-pointer' : 'text-gray-700 pointer-events-none'}`}>
+                                                                    {col.logoUrl ? 'Update Logo' : 'Upload Logo'}
+                                                                </label>
+                                                                <button onClick={() => setForm(f => ({ ...f, allowedColleges: f.allowedColleges.filter(c => c.id !== col.id) }))} className="text-[10px] font-bold tracking-wider uppercase text-red-500/60 hover:text-red-500 transition-colors">Remove</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </FormSection>
 
-                            {/* Games Section */}
-                            <div>
-                                <h3 className="text-lg font-bold text-white mb-4">Game Selection (Required) *</h3>
-                                <p className="text-sm text-gray-400 mb-4">At least one game is required.</p>
-                                
-                                <div className="space-y-4">
-                                    <div className="flex gap-4">
-                                        <input
-                                            type="text"
-                                            value={gameName}
-                                            onChange={(e) => setGameName(e.target.value)}
-                                            placeholder="Game name (e.g., BGMI, Free Fire)"
-                                            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-neon-green/50"
-                                        />
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(e) => setGameLogoFile(e.target.files?.[0] || null)}
-                                            className="hidden"
-                                            id="game-logo"
-                                        />
-                                        <label
-                                            htmlFor="game-logo"
-                                            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg cursor-pointer transition-colors text-white"
-                                        >
-                                            <RiImageLine /> Logo
-                                        </label>
-                                        <button
-                                            onClick={addGame}
-                                            className="px-6 py-2 bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg hover:bg-neon-green/30 transition-colors"
-                                        >
-                                            Add Game
-                                        </button>
-                                    </div>
-
-                                    {form.games.length > 0 && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {form.games.map(game => (
-                                                <div key={game.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                                                    {game.logoUrl && (
-                                                        <img src={game.logoUrl} alt={game.name} className="w-10 h-10 object-cover rounded" />
-                                                    )}
-                                                    <span className="flex-1 text-white">{game.name}</span>
-                                                    <button
-                                                        onClick={() => removeGame(game.id)}
-                                                        className="text-red-400 hover:text-red-300"
-                                                    >
-                                                        <RiCloseLine className="text-xl" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                            {/* Section 5 — Finance & Limits */}
+                            <FormSection title="5. Finance & Limits" icon={RiMoneyDollarCircleLine}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <Field label="Entry Fee (₹) — 0 for Free">
+                                        <div className="relative">
+                                            <RiMoneyDollarCircleLine className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                                            <input type="number" className={inputCls + ' pl-10'} value={form.paymentAmount} onChange={e => setForm({ ...form, paymentAmount: parseInt(e.target.value) || 0 })} />
                                         </div>
-                                    )}
+                                    </Field>
+                                    <Field label="Maximum Slots (0 for Unlimited)">
+                                        <div className="relative">
+                                            <RiGroupLine className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                                            <input type="number" className={inputCls + ' pl-10'} value={form.maxSlots} onChange={e => setForm({ ...form, maxSlots: parseInt(e.target.value) || 0 })} />
+                                        </div>
+                                    </Field>
                                 </div>
-                            </div>
+                            </FormSection>
                         </div>
 
-                        <div className="p-6 border-t border-white/10 flex gap-4">
+                        {/* Modal Footer */}
+                        <div className="p-6 border-t border-white/10 bg-[#070707] rounded-b-2xl flex flex-col sm:flex-row gap-4">
                             <button
-                                onClick={() => handleSave(false)}
+                                onClick={() => handleSave('DRAFT')}
                                 disabled={saving}
-                                className="flex-1 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors text-white font-semibold disabled:opacity-50"
+                                className="flex-1 px-8 py-3.5 bg-white/5 text-white border border-white/10 rounded-xl font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                {saving ? 'Saving...' : editingTournament ? 'Update' : 'Save as Draft'}
+                                {saving ? <RiLoader4Line className="animate-spin text-xl" /> : <RiEditLine className="text-xl" />}
+                                SAVE AS DRAFT
                             </button>
                             <button
-                                onClick={() => handleSave(true)}
+                                onClick={() => handleSave('ACTIVE')}
                                 disabled={saving}
-                                className="flex-1 px-6 py-3 bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg hover:bg-neon-green/30 transition-colors font-semibold disabled:opacity-50"
+                                className="flex-1 px-8 py-3.5 bg-neon-green text-black rounded-xl font-bold hover:bg-neon-green/90 transition-all shadow-[0_0_20px_rgba(0,255,102,0.15)] flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                                {saving ? 'Publishing...' : editingTournament ? 'Update & Publish' : 'Publish Tournament'}
+                                {saving ? <RiLoader4Line className="animate-spin text-xl" /> : <RiCheckLine className="text-xl font-bold" />}
+                                ACTIVATE TOURNAMENT
                             </button>
                         </div>
                     </div>
@@ -632,3 +507,97 @@ export default function AdminTournamentsPage() {
         </div>
     );
 }
+
+// ─── HELPERS ────────────────────────────────────────────────────────────
+
+function StatCard({ label, value, color = "text-white" }: { label: string; value: number; color?: string }) {
+    return (
+        <GlowCard>
+            <div className="text-center md:text-left">
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{label}</p>
+                <p className={`text-xl sm:text-2xl font-orbitron font-bold ${color}`}>{value}</p>
+            </div>
+        </GlowCard>
+    );
+}
+
+function TournamentCard({ tournament, onEdit, onDelete, delay }: { tournament: Tournament; onEdit: () => void; onDelete: () => void; delay: number }) {
+    return (
+        <GlowCard delay={delay}>
+            <div className="space-y-5 h-full flex flex-col">
+                <div className="aspect-video w-full rounded-xl bg-white/5 border border-white/5 overflow-hidden relative">
+                    {tournament.posterUrl ? (
+                        <img src={tournament.posterUrl} alt={tournament.name} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-600">No Poster</div>
+                    )}
+                    <div className="absolute top-3 right-3">
+                        <StatusBadge status={tournament.status} />
+                    </div>
+                </div>
+
+                <div className="flex-1">
+                    <h3 className="text-lg font-orbitron font-bold text-white tracking-wide truncate">{tournament.name}</h3>
+                    <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">{tournament.description}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pb-3">
+                    <MiniInfo label="Slots" value={`${tournament.currentRegistrations}/${tournament.maxSlots || '∞'}`} />
+                    <MiniInfo label="Entry" value={tournament.paymentAmount === 0 ? 'FREE' : `₹${tournament.paymentAmount}`} />
+                </div>
+
+                <div className="flex items-center gap-2 pt-4 border-t border-white/5">
+                    <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white/5 border border-white/8 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-all uppercase tracking-widest">
+                        <RiEditLine /> Configure
+                    </button>
+                    <button onClick={onDelete} disabled={tournament.currentRegistrations > 0} className="w-10 h-10 flex items-center justify-center bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 hover:bg-red-500/20 transition-all disabled:opacity-20 disabled:grayscale">
+                        <RiDeleteBinLine />
+                    </button>
+                </div>
+            </div>
+        </GlowCard>
+    );
+}
+
+function StatusBadge({ status }: { status: string }) {
+    const cls = status === 'ACTIVE' ? 'bg-neon-green/10 text-neon-green border-neon-green/30' :
+        status === 'DRAFT' ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/30' :
+            'bg-red-400/10 text-red-400 border-red-400/30';
+    return (
+        <span className={`px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase tracking-widest backdrop-blur-md ${cls}`}>
+            {status}
+        </span>
+    );
+}
+
+function MiniInfo({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="space-y-0.5">
+            <p className="text-[9px] font-bold text-gray-600 uppercase tracking-tighter">{label}</p>
+            <p className="text-[11px] font-bold text-white truncate">{value}</p>
+        </div>
+    );
+}
+
+function FormSection({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                <Icon className="text-xl text-neon-green" />
+                <h3 className="font-orbitron font-bold text-gray-300 tracking-wider text-sm">{title}</h3>
+            </div>
+            {children}
+        </div>
+    );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="space-y-2">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+            {children}
+        </div>
+    );
+}
+
+const inputCls = "w-full bg-white/3 border border-white/8 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-neon-green/40 focus:bg-white/5 transition-all";

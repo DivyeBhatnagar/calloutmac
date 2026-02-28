@@ -24,38 +24,55 @@ async function patchTournaments() {
         const update: any = {};
         let changed = false;
 
-        // 1. supportedGames (Dynamic derivation)
+        // 1. supportedGames (Dynamic derivation to objects)
         const existingGames = data.games || []; // Array of { id, name, logoUrl }
-        let targetGames = data.supportedGames || [];
+        let targetGames: any[] = [];
 
         if (Array.isArray(existingGames) && existingGames.length > 0) {
-            // Priority: sync from the rich 'games' array
-            targetGames = existingGames.map((g: any) => g.name).filter(Boolean);
+            targetGames = existingGames.map((g: any) => ({
+                id: g.id || admin.firestore().collection('tmp').doc().id,
+                name: g.name,
+                logoUrl: g.logoUrl || ''
+            }));
+        } else if (Array.isArray(data.supportedGames) && data.supportedGames.length > 0) {
+            // Convert legacy string array to objects
+            targetGames = data.supportedGames.map((g: any) => {
+                if (typeof g === 'string') return { id: admin.firestore().collection('tmp').doc().id, name: g, logoUrl: '' };
+                return g;
+            });
         }
 
         if (targetGames.length === 0) {
-            // Fallback for legacy data with no 'games' and no 'supportedGames'
-            targetGames = ['BGMI'];
+            targetGames = [{ id: 'bgmi-default', name: 'BGMI', logoUrl: '' }];
         }
 
-        // Compare targetGames with current supportedGames to avoid unnecessary updates
-        const currentGamesStr = JSON.stringify((data.supportedGames || []).sort());
-        const targetGamesStr = JSON.stringify([...targetGames].sort());
+        // Compare targetGames with current supportedGames
+        const currentGames = data.supportedGames || [];
+        const isGameMismatch = JSON.stringify(currentGames) !== JSON.stringify(targetGames);
 
-        if (currentGamesStr !== targetGamesStr) {
+        if (isGameMismatch) {
             update.supportedGames = targetGames;
             changed = true;
         }
 
-        // 2. allowedColleges
-        if (!data.allowedColleges || !Array.isArray(data.allowedColleges)) {
-            update.allowedColleges = [];
+        // 2. allowedColleges (Objects {id, name, logoUrl})
+        let targetColleges: any[] = [];
+        if (Array.isArray(data.allowedColleges) && data.allowedColleges.length > 0) {
+            targetColleges = data.allowedColleges.map((c: any) => {
+                if (typeof c === 'string') return { id: admin.firestore().collection('tmp').doc().id, name: c, logoUrl: '' };
+                return c;
+            });
+        }
+
+        const currentColleges = data.allowedColleges || [];
+        if (JSON.stringify(currentColleges) !== JSON.stringify(targetColleges)) {
+            update.allowedColleges = targetColleges;
             changed = true;
         }
 
         // 3. status
-        if (!data.status) {
-            update.status = 'active';
+        if (data.status !== 'ACTIVE') {
+            update.status = 'ACTIVE';
             changed = true;
         }
 

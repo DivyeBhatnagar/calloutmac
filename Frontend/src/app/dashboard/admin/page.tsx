@@ -17,7 +17,7 @@ export default function AdminStatsPage() {
     const { data: queries } = useRealtimeCollection<Query>('queries');
 
     const stats = useMemo(() => {
-        const activeTournaments = tournaments.filter(t => t.status === 'active').length;
+        const activeTournaments = tournaments.filter(t => t.status === 'ACTIVE').length;
         const totalRegistrations = registrations.length;
         const platformUsers = users.length;
         const supportQueries = queries.filter(q => q.status === 'pending').length;
@@ -117,7 +117,7 @@ export default function AdminStatsPage() {
                         <div className="flex items-end gap-2">
                             <h3 className="text-2xl font-bold text-white">
                                 {tournaments.length > 0
-                                    ? Math.round((tournaments.filter(t => t.status === 'closed').length / tournaments.length) * 100)
+                                    ? Math.round((tournaments.filter(t => t.status === 'CLOSED').length / tournaments.length) * 100)
                                     : 0}%
                             </h3>
                             <span className="text-sm text-gray-500 mb-1">of all tournaments</span>
@@ -180,8 +180,8 @@ export default function AdminStatsPage() {
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <span className={`px-3 py-1 text-xs font-bold rounded-full ${reg.paymentVerified
-                                                ? 'bg-neon-green/20 text-neon-green'
-                                                : 'bg-yellow-500/20 text-yellow-500'
+                                            ? 'bg-neon-green/20 text-neon-green'
+                                            : 'bg-yellow-500/20 text-yellow-500'
                                             }`}>
                                             {reg.paymentVerified ? 'VERIFIED' : 'PENDING'}
                                         </span>

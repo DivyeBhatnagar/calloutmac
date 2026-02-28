@@ -11,7 +11,7 @@ import { RiTrophyLine, RiGamepadLine, RiTeamLine, RiHotelLine } from "react-icon
 
 export default function PublicTournamentsPage() {
     const { data: allTournaments, loading } = useRealtimeCollection<Tournament>("tournaments", [
-        where("status", "==", "active")
+        where("status", "==", "ACTIVE")
     ]);
 
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -107,12 +107,12 @@ export default function PublicTournamentsPage() {
                                         <div className="flex flex-col gap-2">
                                             <span className="w-fit text-xs font-mono font-bold text-black bg-neon-green py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,102,0.4)]">
                                                 <RiGamepadLine />
-                                                {tourney.games?.map((g: any) => g.name).join(', ') || "ESPORTS"}
+                                                {tourney.supportedGames?.map((g: any) => g.name).join(', ') || "ESPORTS"}
                                             </span>
-                                            {tourney.colleges && tourney.colleges.length > 0 ? (
+                                            {tourney.allowedColleges && tourney.allowedColleges.length > 0 ? (
                                                 <span className="w-fit text-xs font-mono font-bold text-black bg-yellow-400 py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(250,204,21,0.4)]">
                                                     <RiHotelLine />
-                                                    {tourney.colleges.map((c: any) => c.name).join(', ')}
+                                                    {tourney.allowedColleges.map((c: any) => c.name).join(', ')}
                                                 </span>
                                             ) : (
                                                 <span className="w-fit text-xs font-mono font-bold text-black bg-blue-400 py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(96,165,250,0.4)]">

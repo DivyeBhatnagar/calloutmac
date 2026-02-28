@@ -21,18 +21,29 @@ if (!admin.apps.length) {
             // If running locally, this will likely fail unless the user sets it up.
             // But verifyIdToken can work without a private key if we at least provide the projectId!
             admin.initializeApp({
-                projectId: process.env.FIREBASE_PROJECT_ID || 'call-out-esports'
+                projectId: process.env.FIREBASE_PROJECT_ID || 'call-out-esports',
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.firebasestorage.app`
             });
         }
     } catch (error) {
         console.warn("Failed to initialize Firebase Admin with specific credentials. Ensure FIREBASE_SERVICE_ACCOUNT_BASE64 or GOOGLE_APPLICATION_CREDENTIALS is set.", error);
         // Best effort init
         try {
-            admin.initializeApp();
+            admin.initializeApp({
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.firebasestorage.app`
+            });
         } catch (e) { } // Ignore duplicate init or failure
     }
 }
 
 export const db = admin.firestore();
 export const adminAuth = admin.auth();
+export const storage = (() => {
+    try {
+        return admin.storage().bucket();
+    } catch (e) {
+        console.warn("Storage bucket not initialized. Some features may not work.");
+        return null as any;
+    }
+})();
 export default admin;

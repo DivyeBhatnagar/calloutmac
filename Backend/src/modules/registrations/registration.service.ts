@@ -79,28 +79,32 @@ export const registrationService = {
         }
 
         // --- STEP 3 — COLLEGE VALIDATION ---
-        const allowedColleges: string[] = tournamentData.allowedColleges || [];
-        if (allowedColleges.length > 0) {
-            if (!college) {
-                throw { statusCode: 400, message: 'This tournament requires a college selection' };
-            }
-            if (!allowedColleges.includes(college)) {
-                throw { statusCode: 400, message: `College "${college}" is not allowed for this tournament` };
+        if (tournamentData.collegesRestricted) {
+            const allowedColleges: any[] = tournamentData.allowedColleges || [];
+            if (allowedColleges.length > 0) {
+                if (!college) {
+                    throw { statusCode: 400, message: 'This tournament requires a college selection' };
+                }
+                const isValid = allowedColleges.some((c: any) => c.name === college);
+                if (!isValid) {
+                    throw { statusCode: 400, message: `College "${college}" is not allowed for this tournament` };
+                }
             }
         }
 
         // --- STEP 4 — GAME VALIDATION ---
-        const supportedGames: string[] = tournamentData.supportedGames || [];
+        const supportedGames: any[] = tournamentData.supportedGames || [];
         let resolvedGame = game;
 
         if (supportedGames.length === 1) {
             // Single-game tournament — assign automatically
-            resolvedGame = supportedGames[0];
+            resolvedGame = supportedGames[0].name;
         } else if (supportedGames.length > 1) {
             if (!game) {
                 throw { statusCode: 400, message: 'This tournament requires a game selection' };
             }
-            if (!supportedGames.includes(game)) {
+            const isValid = supportedGames.some((g: any) => g.name === game);
+            if (!isValid) {
                 throw { statusCode: 400, message: `Game "${game}" is not supported by this tournament` };
             }
         }
@@ -335,20 +339,24 @@ export const registrationService = {
         }
 
         // College restriction
-        const allowedColleges: string[] = tData.allowedColleges || [];
-        if (allowedColleges.length > 0) {
-            if (!college) throw { statusCode: 400, message: 'This tournament requires a college selection' };
-            if (!allowedColleges.includes(college)) throw { statusCode: 400, message: `College "${college}" is not allowed` };
+        if (tData.collegesRestricted) {
+            const allowedColleges: any[] = tData.allowedColleges || [];
+            if (allowedColleges.length > 0) {
+                if (!college) throw { statusCode: 400, message: 'This tournament requires a college selection' };
+                const isValid = allowedColleges.some((c: any) => c.name === college);
+                if (!isValid) throw { statusCode: 400, message: `College "${college}" is not allowed` };
+            }
         }
 
         // Game restriction
-        const supportedGames: string[] = tData.supportedGames || [];
+        const supportedGames: any[] = tData.supportedGames || [];
         let resolvedGame = game;
         if (supportedGames.length === 1) {
-            resolvedGame = supportedGames[0];
+            resolvedGame = supportedGames[0].name;
         } else if (supportedGames.length > 1) {
             if (!game) throw { statusCode: 400, message: 'This tournament requires a game selection' };
-            if (!supportedGames.includes(game)) throw { statusCode: 400, message: `Game "${game}" is not supported` };
+            const isValid = supportedGames.some((g: any) => g.name === game);
+            if (!isValid) throw { statusCode: 400, message: `Game "${game}" is not supported` };
         }
 
         // ── Duplicate team name ───────────────────────────────────
