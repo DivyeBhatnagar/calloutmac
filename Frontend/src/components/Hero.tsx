@@ -30,8 +30,8 @@ export function Hero() {
                     </motion.div>
 
                     <h1 className="text-6xl lg:text-8xl font-black font-orbitron uppercase text-white leading-none tracking-tighter text-glow">
-                        Enter The <br />
-                        <span className="text-neon-green">Arena</span>
+                        CALLOUT <br />
+                        <span className="text-neon-green">ESPORTS</span>
                     </h1>
 
                     <p className="text-gray-400 text-lg lg:text-xl font-sans max-w-lg mb-4">
@@ -48,49 +48,19 @@ export function Hero() {
                     </div>
                 </motion.div>
 
-                {/* Right Content - 3D Levitation */}
+                {/* Right Content - Logo */}
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 1, delay: 0.5 }}
-                    className="relative h-[500px] flex items-center justify-center perspective-1000 hidden lg:flex"
+                    className="relative hidden lg:flex items-center justify-center p-8"
                 >
-                    {/* Animated rings */}
-                    <motion.div
-                        animate={{ rotateZ: 360, rotateX: 360, rotateY: 180 }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                        className="absolute w-80 h-80 rounded-full border border-neon-green/40 border-dashed"
-                        style={{ transformStyle: "preserve-3d" }}
+                    <div className="absolute inset-0 bg-neon-green/10 blur-[100px] rounded-full mix-blend-screen animate-pulse" />
+                    <img
+                        src="/logo.png"
+                        alt="Callout Esports"
+                        className="relative z-10 w-full max-w-[400px] object-contain drop-shadow-[0_0_30px_rgba(0,255,102,0.4)] transition-transform duration-700 hover:scale-105"
                     />
-                    <motion.div
-                        animate={{ rotateZ: -360, rotateX: -180, rotateY: -360 }}
-                        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                        className="absolute w-96 h-96 rounded-full border border-neon-dark/30 border-dashed"
-                        style={{ transformStyle: "preserve-3d" }}
-                    />
-
-                    {/* Central floating cube/element */}
-                    <motion.div
-                        animate={{
-                            y: [-15, 15, -15],
-                            rotateX: [0, 10, 0],
-                            rotateY: [0, -10, 0]
-                        }}
-                        transition={{
-                            duration: 6,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
-                        className="relative w-48 h-48 bg-glass backdrop-blur-md border border-neon-green/50 flex items-center justify-center rotate-45 neon-shadow"
-                        style={{ transformStyle: "preserve-3d" }}
-                    >
-                        <div className="absolute inset-2 border border-neon-green/30" />
-                        <div className="absolute inset-6 border border-neon-green/20" />
-                        <div className="w-16 h-16 bg-neon-green blur-xl rounded-full absolute" />
-                        <div className="-rotate-45 relative z-10 text-neon-green font-orbitron font-bold text-2xl">
-                            CALLOUT
-                        </div>
-                    </motion.div>
                 </motion.div>
             </div>
         </section>

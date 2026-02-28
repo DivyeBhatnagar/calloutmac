@@ -10,10 +10,10 @@ interface GameProps {
 }
 
 const games: GameProps[] = [
-    { name: "BGMI", image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop", delay: 0 },
-    { name: "Valorant", image: "https://images.unsplash.com/photo-1624138784614-87fd1b650771?q=80&w=2000&auto=format&fit=crop", delay: 0.1 },
-    { name: "Free Fire", image: "https://images.unsplash.com/photo-1589241062272-c0a000072dfa?q=80&w=2000&auto=format&fit=crop", delay: 0.2 },
-    { name: "COD Mobile", image: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2000&auto=format&fit=crop", delay: 0.3 },
+    { name: "BGMI", image: "/games/BGMI.webp", delay: 0 },
+    { name: "Valorant", image: "/games/VALORANT.jpg", delay: 0.1 },
+    { name: "Free Fire", image: "/games/FREEFIREMAX.jpg", delay: 0.2 },
+    { name: "COD Mobile", image: "/games/COD.webp", delay: 0.3 },
 ];
 
 export function FeaturedGames() {
