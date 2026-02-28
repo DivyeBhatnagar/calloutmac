@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const query_controller_1 = require("./query.controller");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authenticate, auth_middleware_1.authorizeAdmin);
+router.get('/admin', query_controller_1.getAllQueries);
+router.patch('/admin/:id/respond', query_controller_1.respondToQuery);
+exports.default = router;
