@@ -11,10 +11,11 @@ export function Header() {
     return (
         <header className="fixed top-0 w-full border-b border-neon-green/20 bg-black/80 backdrop-blur-md z-50">
             <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-2">
-                    <Image src="/logo.png" alt="CallOut Esports Logo" width={40} height={40} className="object-contain" />
-                    <div className="text-2xl font-black font-orbitron tracking-widest text-white">
-                        CALL<span className="text-neon-green">OUT</span>
+                <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-105">
+                    <Image src="/logo.png" alt="CallOut Esports Logo" width={55} height={55} className="object-contain drop-shadow-[0_0_8px_rgba(0,255,102,0.3)]" />
+                    <div className="text-2xl font-black font-orbitron tracking-widest flex items-center gap-2">
+                        <span className="text-white">CALLOUT</span>
+                        <span className="text-neon-green glow-text">ESPORTS</span>
                     </div>
                 </Link>
                 <nav className="hidden md:flex items-center gap-8 font-mono text-sm uppercase tracking-wider text-gray-400">
@@ -23,7 +24,7 @@ export function Header() {
                     <a href="#games" className="hover:text-neon-green transition-colors">Games</a>
                     <a href="#leaderboard" className="hover:text-neon-green transition-colors">Leaderboard</a>
                 </nav>
-                
+
                 {!loading && (
                     <div className="flex items-center gap-4">
                         {user ? (
@@ -42,11 +43,10 @@ export function Header() {
                                 {user.role.toUpperCase() === 'ADMIN' && (
                                     <button
                                         onClick={toggleViewMode}
-                                        className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-all font-mono text-sm ${
-                                            viewMode === 'ADMIN'
+                                        className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-all font-mono text-sm ${viewMode === 'ADMIN'
                                                 ? 'bg-neon-green/20 text-neon-green border-neon-green/50 hover:bg-neon-green/30'
                                                 : 'bg-blue-500/20 text-blue-400 border-blue-500/50 hover:bg-blue-500/30'
-                                        }`}
+                                            }`}
                                         title={`Switch to ${viewMode === 'ADMIN' ? 'User' : 'Admin'} Mode`}
                                     >
                                         {viewMode === 'ADMIN' ? (
@@ -63,8 +63,8 @@ export function Header() {
                                     </button>
                                 )}
 
-                                <Link 
-                                    href={viewMode === 'ADMIN' ? '/dashboard/admin' : '/dashboard'} 
+                                <Link
+                                    href={viewMode === 'ADMIN' ? '/dashboard/admin' : '/dashboard'}
                                     className="flex items-center gap-2 text-sm font-mono text-white hover:text-neon-green px-4 py-2 transition-colors"
                                 >
                                     <RiDashboardLine />

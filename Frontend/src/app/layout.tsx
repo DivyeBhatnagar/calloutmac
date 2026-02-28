@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { FooterWrapper } from "@/components/FooterWrapper";
 import { AuthProvider } from "@/lib/auth-context";
 
 export default function RootLayout({
@@ -36,7 +36,7 @@ export default function RootLayout({
           <main className="min-h-screen pt-20 bg-black text-white font-sans selection:bg-neon-green/30 selection:text-neon-green">
             {children}
           </main>
-          <Footer />
+          <FooterWrapper />
         </AuthProvider>
       </body>
     </html>

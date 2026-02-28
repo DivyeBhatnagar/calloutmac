@@ -43,11 +43,12 @@ export default function Sidebar() {
     return (
         <aside className="w-64 flex-shrink-0 border-r border-white/10 bg-black/60 backdrop-blur-xl hidden md:flex flex-col h-full sticky top-0 min-h-screen">
             <div className="p-6 border-b border-white/10 mb-6">
-                <Link href="/" className="flex items-center gap-3 group">
-                    <div className="w-8 h-8 rounded bg-neon-green/20 border border-neon-green/50 flex items-center justify-center group-hover:shadow-[0_0_15px_rgba(0,255,102,0.4)] transition-all">
-                        <RiTrophyFill className="text-neon-green text-xl" />
+                <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-105">
+                    <img src="/logo.png" alt="CallOut Esports Logo" className="w-[45px] h-[45px] object-contain drop-shadow-[0_0_8px_rgba(0,255,102,0.3)]" />
+                    <div className="text-xl font-black font-orbitron tracking-widest flex flex-col leading-none">
+                        <span className="text-white">CALLOUT</span>
+                        <span className="text-neon-green glow-text text-sm mt-1">ESPORTS</span>
                     </div>
-                    <span className="font-orbitron font-bold text-xl text-white tracking-wider glow-text">CALLOUT</span>
                 </Link>
             </div>
 
@@ -57,23 +58,21 @@ export default function Sidebar() {
                     <div className="mb-4">
                         <button
                             onClick={toggleViewMode}
-                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                                viewMode === 'ADMIN'
+                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-300 ${viewMode === 'ADMIN'
                                     ? 'bg-neon-green/20 text-neon-green border border-neon-green/50 hover:bg-neon-green/30 shadow-[0_0_15px_rgba(0,255,102,0.2)]'
                                     : 'bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
-                            }`}
+                                }`}
                         >
                             <RiArrowLeftRightLine className="text-xl" />
                             {viewMode === 'ADMIN' ? 'Switch to User' : 'Switch to Admin'}
                         </button>
                         <div className="h-px bg-white/10 my-4"></div>
-                        
+
                         {/* Mode Indicator */}
-                        <div className={`px-4 py-2 rounded-lg text-center text-sm font-semibold mb-2 ${
-                            viewMode === 'ADMIN'
+                        <div className={`px-4 py-2 rounded-lg text-center text-sm font-semibold mb-2 ${viewMode === 'ADMIN'
                                 ? 'bg-neon-green/10 text-neon-green border border-neon-green/30'
                                 : 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
-                        }`}>
+                            }`}>
                             {viewMode === 'ADMIN' ? '🛡️ ADMIN MODE' : '👤 USER MODE'}
                         </div>
                     </div>
@@ -88,8 +87,8 @@ export default function Sidebar() {
                             key={link.href}
                             href={link.href}
                             className={`relative flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-300 group overflow-hidden ${isActive
-                                    ? 'text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                ? 'text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             {isActive && (
