@@ -5,50 +5,50 @@ import { useRealtimeCollection } from '@/hooks/useRealtimeCollection';
 import { where, orderBy, limit } from 'firebase/firestore';
 import GlowCard from '@/components/GlowCard';
 import { RiGamepadLine, RiTeamLine, RiMoneyCnyBoxLine, RiCheckboxCircleLine, RiTimeLine, RiUserLine, RiQuestionLine } from 'react-icons/ri';
-import { Registration, Tournament, User, Query } from '@/types';
+import { Registration, Tournament, User } from '@/types';
+import { SupportTicket } from '@/types/support';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
+import { useState, useEffect } from 'react';
 
 export default function AdminStatsPage() {
+    const { token } = useAuth();
     const { data: tournaments, loading: tournamentsLoading } = useRealtimeCollection<Tournament>('tournaments');
     const { data: registrations, loading: regsLoading } = useRealtimeCollection<Registration>('registrations', [
         orderBy('createdAt', 'desc')
     ]);
     const { data: users } = useRealtimeCollection<User>('users');
-    const { data: queries } = useRealtimeCollection<Query>('queries');
+    const [queries, setQueries] = useState<SupportTicket[]>([]);
+
+    useEffect(() => {
+        const fetchQueries = async () => {
+            if (!token) return;
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/support`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && data.data) {
+                    setQueries(data.data.tickets || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch queries", error);
+            }
+        };
+        fetchQueries();
+    }, [token]);
 
     const stats = useMemo(() => {
-        const activeTournaments = tournaments.filter(t => t.status === 'ACTIVE').length;
+        const liveTournaments = tournaments.filter(t => t.status.toUpperCase() === 'LIVE').length;
         const totalRegistrations = registrations.length;
         const platformUsers = users.length;
-        const supportQueries = queries.filter(q => q.status === 'pending').length;
-
-        const verifiedRegs = registrations.filter(r => r.paymentVerified);
-        const revenueThisMonth = verifiedRegs.reduce((sum, reg) => {
-            const regDate = (reg.createdAt ?? reg.registeredAt)?.toDate?.() || new Date();
-            const now = new Date();
-            if (regDate.getMonth() === now.getMonth() && regDate.getFullYear() === now.getFullYear()) {
-                return sum + (reg.payment?.amount || 0);
-            }
-            return sum;
-        }, 0);
-
-        const pendingVerifications = registrations.filter(r => !r.paymentVerified && r.paymentStatus === 'PENDING').length;
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const activeUsersToday = users.filter(u => {
-            const lastLogin = u.lastLogin?.toDate?.() || new Date(0);
-            return lastLogin >= today;
-        }).length;
+        const supportQueries = queries.filter(q => q.status !== 'RESOLVED' && q.status !== 'CLOSED').length;
 
         return {
-            activeTournaments,
+            liveTournaments,
             totalRegistrations,
             platformUsers,
-            supportQueries,
-            revenueThisMonth,
-            pendingVerifications,
-            activeUsersToday
+            supportQueries
         };
     }, [tournaments, registrations, users, queries]);
 
@@ -69,13 +69,10 @@ export default function AdminStatsPage() {
     }
 
     const statCards = [
-        { label: 'Active Tournaments', value: stats.activeTournaments, icon: RiGamepadLine, color: 'text-neon-green', link: '/dashboard/admin/tournaments' },
+        { label: 'Live Tournaments', value: stats.liveTournaments, icon: RiGamepadLine, color: 'text-neon-green', link: '/dashboard/admin/tournaments' },
         { label: 'Total Registrations', value: stats.totalRegistrations, icon: RiTeamLine, color: 'text-blue-400', link: '/dashboard/admin/registrations' },
         { label: 'Platform Users', value: stats.platformUsers, icon: RiUserLine, color: 'text-purple-400', link: '/dashboard/admin/users' },
-        { label: 'Support Queries', value: stats.supportQueries, icon: RiQuestionLine, color: 'text-orange-400', link: '/dashboard/admin/queries' },
-        { label: 'Revenue This Month', value: `₹${stats.revenueThisMonth}`, icon: RiMoneyCnyBoxLine, color: 'text-yellow-400', link: '/dashboard/admin/analytics' },
-        { label: 'Pending Verifications', value: stats.pendingVerifications, icon: RiTimeLine, color: 'text-red-400', link: '/dashboard/admin/registrations' },
-        { label: 'Active Users Today', value: stats.activeUsersToday, icon: RiCheckboxCircleLine, color: 'text-cyan-400', link: '/dashboard/admin/users' },
+        { label: 'Support Queries', value: stats.supportQueries, icon: RiQuestionLine, color: 'text-orange-400', link: '/dashboard/admin/support' }
     ];
 
     return (
@@ -198,7 +195,7 @@ export default function AdminStatsPage() {
                 <div>
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-orbitron font-bold text-white tracking-wide">Pending Queries</h2>
-                        <Link href="/dashboard/admin/queries" className="text-neon-green hover:underline text-sm">
+                        <Link href="/dashboard/admin/support" className="text-neon-green hover:underline text-sm">
                             View All →
                         </Link>
                     </div>

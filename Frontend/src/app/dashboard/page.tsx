@@ -31,18 +31,18 @@ export default function DashboardHome() {
     ]);
 
     const stats = useMemo(() => {
-        const totalParticipated = registrations.length;
+        const liveTournamentsCount = tournaments.filter(t => t.status.toUpperCase() === 'LIVE' || t.status.toUpperCase() === 'ACTIVE').length;
         const activeRegs = registrations.filter(r => r.paymentVerified).length;
         const pendingVerifications = registrations.filter(r => !r.paymentVerified && r.paymentStatus === 'PENDING').length;
         const completed = registrations.filter(r => r.status === 'COMPLETED').length;
 
         return {
-            totalParticipated,
+            liveTournamentsCount,
             activeRegs,
             pendingVerifications,
             completed
         };
-    }, [registrations]);
+    }, [registrations, tournaments]);
 
     const recentActivity = useMemo(() => {
         return registrations.slice(0, 5).map(reg => ({
@@ -64,7 +64,7 @@ export default function DashboardHome() {
     }
 
     const statCards = [
-        { label: 'Total Tournaments', value: stats.totalParticipated, icon: RiGamepadLine, color: 'text-blue-400' },
+        { label: 'Live Tournaments', value: stats.liveTournamentsCount, icon: RiGamepadLine, color: 'text-blue-400' },
         { label: 'Active Registrations', value: stats.activeRegs, icon: RiTrophyLine, color: 'text-neon-green' },
         { label: 'Pending Verifications', value: stats.pendingVerifications, icon: RiTimeLine, color: 'text-yellow-400' },
         { label: 'Completed', value: stats.completed, icon: RiCheckboxCircleLine, color: 'text-purple-400' },
@@ -173,10 +173,10 @@ export default function DashboardHome() {
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500 uppercase tracking-wider">Payment</p>
                                             <span className={`px-3 py-1 text-xs font-bold rounded-full ${reg.paymentVerified
-                                                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/50'
-                                                    : reg.paymentStatus === 'FAILED'
-                                                        ? 'bg-red-500/20 text-red-500 border border-red-500/50'
-                                                        : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
+                                                ? 'bg-neon-green/20 text-neon-green border border-neon-green/50'
+                                                : reg.paymentStatus === 'FAILED'
+                                                    ? 'bg-red-500/20 text-red-500 border border-red-500/50'
+                                                    : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
                                                 }`}>
                                                 {reg.paymentVerified ? '🟢 VERIFIED' : reg.paymentStatus === 'FAILED' ? '🔴 FAILED' : '🟡 PENDING'}
                                             </span>
