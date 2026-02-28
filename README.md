@@ -21,14 +21,17 @@ Whether players are dominating in **BGMI, Valorant, Free Fire Max, or Call of Du
 - **Dynamic Tournaments Hub:** Real-time visibility into all active tournaments, displaying live prize pools, current slot capacities, and dynamic *LIVE NOW* indicators.
 - **Dedicated Game Pages:** Sort active matches directly under supported flagship titles.
 - **Player Dashboard:** A unified player portal to track upcoming registered events, recent activity, and personalized account statistics.
-- **Secure Authentication:** Seamless Email/Password and one-click Google account sign-ins.
+- **Two-Way Support System:** Built-in threaded ticketing system for users to raise issues, check chronological chat logs, and receive real-time admin support directly from the dashboard.
+- **Secure Authentication:** Seamless Email/Password and one-click Google account sign-ins securely handled by Firebase Auth.
 - **Mobile-First Experience:** Flawlessly responsive layout designed meticulously for iOS and Android players—complete with smooth slide-drawer navigation and stacked-card tables.
 
 ### For Administrators
 - **Robust Admin Portal:** A secure toggle allowing admins to manage the entire ecosystem without leaving the dashboard.
-- **Tournament Control:** Create, edit, and toggle active/completed lifecycle states of tournaments globally.
-- **Registration Management:** Oversee incoming team registrations, verify payments, and export participants to CSV effortlessly.
-- **User & Query Moderation:** Grant admin roles, manage the player network, and resolve incoming support tickets in real time.
+- **Advanced Analytics & Telemetry:** Visualize platform growth and operative acquisitions through dynamic Recharts graphs.
+- **Tournament Execution:** Create, edit, set registration deadlines, and toggle live/completed lifecycle states of tournaments globally.
+- **Registration Management:** Oversee incoming team registrations, verify payments with 1-click approvals, and track total entry capacities.
+- **Comprehensive Ticket Management:** A dedicated Support Panel with dynamic search and filtering per-category (Payments, Technical, Registration). Chat thread responses, 1-click `Resolve`/`Close` workflow, and permanent deletion controls.
+- **User Moderation:** Grant admin roles and oversee the vast player network with ease.
 
 ---
 
