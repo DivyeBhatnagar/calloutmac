@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.webhook = exports.verifyPayment = exports.createOrder = void 0;
+exports.previewQr = exports.submitPayment = exports.assignQr = exports.webhook = exports.verifyPayment = exports.createOrder = void 0;
 const payment_service_1 = require("./payment.service");
 const response_util_1 = require("../../utils/response.util");
 const createOrder = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -43,3 +43,40 @@ const webhook = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.webhook = webhook;
+// --- DYNAMIC QR PAYMENT ENDPOINTS ---
+const assignQr = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const data = yield payment_service_1.paymentService.assignQr(req.user.id, req.body);
+        (0, response_util_1.sendSuccess)(res, 200, 'QR successfully assigned', data);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.assignQr = assignQr;
+const submitPayment = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const data = yield payment_service_1.paymentService.submitPayment(req.user.id, req.body);
+        (0, response_util_1.sendSuccess)(res, 200, 'Payment submitted successfully', data);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.submitPayment = submitPayment;
+/**
+ * GET /api/payments/preview-qr?tournamentId=xxx
+ * Read-only: returns current QR image URL + amount WITHOUT creating any doc
+ * or advancing the rotation counter.
+ */
+const previewQr = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const tournamentId = req.query.tournamentId;
+        const data = yield payment_service_1.paymentService.previewQr(tournamentId);
+        (0, response_util_1.sendSuccess)(res, 200, 'QR preview loaded', data);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.previewQr = previewQr;

@@ -334,6 +334,20 @@ export const adminService = {
         return { id: updatedDoc.id, ...updatedDoc.data() };
     },
 
+    async deleteTournament(id: string) {
+        const tRef = db.collection('tournaments').doc(id);
+        const tDoc = await tRef.get();
+        if (!tDoc.exists) throw { statusCode: 404, message: 'Tournament not found' };
+
+        const data = tDoc.data()!;
+        if (data.currentRegistrations > 0) {
+            throw { statusCode: 400, message: 'Cannot delete tournament with existing registrations' };
+        }
+
+        await tRef.delete();
+        return { success: true, message: 'Tournament deleted successfully' };
+    },
+
     async uploadTournamentPoster(id: string, file: any) {
         const tRef = db.collection('tournaments').doc(id);
         const tDoc = await tRef.get();

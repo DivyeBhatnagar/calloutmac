@@ -9,6 +9,7 @@ import {
     exportRegistrationsCSV,
     createTournament,
     updateTournament,
+    deleteTournament,
     uploadTournamentPoster,
     uploadGameLogo,
     uploadCollegeLogo
@@ -54,6 +55,7 @@ router.get('/registrations/export-csv', exportRegistrationsCSV);
 // Tournament Management
 router.post('/tournaments', createTournament);
 router.patch('/tournaments/:id', updateTournament);
+router.delete('/tournaments/:id', deleteTournament);
 
 // Image Uploads
 router.post('/tournaments/:id/poster', upload.single('poster'), uploadTournamentPoster);

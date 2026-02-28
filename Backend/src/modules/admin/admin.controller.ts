@@ -117,6 +117,20 @@ export const updateTournament = async (req: Request, res: Response, next: NextFu
     }
 };
 
+/**
+ * ADMIN: Delete Tournament
+ * DELETE /api/admin/tournaments/:id
+ */
+export const deleteTournament = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string;
+        const data = await adminService.deleteTournament(id);
+        sendSuccess(res, 200, 'Tournament deleted', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const uploadTournamentPoster = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log(`[AdminController] 📥 uploadTournamentPoster: id=${req.params.id}, hasFile=${!!req.file}`);

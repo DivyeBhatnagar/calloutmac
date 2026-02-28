@@ -9,19 +9,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyRegistration = exports.getAllRegistrations = exports.getUserRegistrations = exports.createRegistration = void 0;
+exports.completeWithPayment = exports.getAllRegistrations = exports.getUserRegistrations = exports.createRegistration = void 0;
 const registration_service_1 = require("./registration.service");
 const response_util_1 = require("../../utils/response.util");
+/**
+ * STEP 5 — Create Registration
+ * POST /api/registrations/create
+ * Returns { registrationId } only (per spec)
+ */
 const createRegistration = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield registration_service_1.registrationService.createRegistration(req.user.id, req.body);
-        (0, response_util_1.sendSuccess)(res, 201, 'Registration created', data);
+        (0, response_util_1.sendSuccess)(res, 201, 'Registration created successfully', data);
     }
     catch (error) {
         next(error);
     }
 });
 exports.createRegistration = createRegistration;
+/**
+ * STEP 9 — User Dashboard: Get My Registrations
+ * GET /api/registrations/user
+ * Returns registrations with statusLabel computed on backend
+ */
 const getUserRegistrations = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield registration_service_1.registrationService.getUserRegistrations(req.user.id);
@@ -32,6 +42,10 @@ const getUserRegistrations = (req, res, next) => __awaiter(void 0, void 0, void 
     }
 });
 exports.getUserRegistrations = getUserRegistrations;
+/**
+ * Admin: Get All Registrations (used by registration.routes legacy path)
+ * Delegates to registrationService.getAllRegistrations
+ */
 const getAllRegistrations = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield registration_service_1.registrationService.getAllRegistrations();
@@ -42,14 +56,19 @@ const getAllRegistrations = (req, res, next) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.getAllRegistrations = getAllRegistrations;
-const verifyRegistration = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+/**
+ * STEP 8 (NEW FLOW) — Complete registration atomically with payment
+ * POST /api/registrations/complete-with-payment
+ * Creates registration + assigns QR + creates payment doc in ONE transaction.
+ * Nothing is written to Firestore until the user submits payment proof.
+ */
+const completeWithPayment = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const id = req.params.id;
-        const data = yield registration_service_1.registrationService.verifyRegistration(id);
-        (0, response_util_1.sendSuccess)(res, 200, 'Registration verified', data);
+        const data = yield registration_service_1.registrationService.completeWithPayment(req.user.id, req.body);
+        (0, response_util_1.sendSuccess)(res, 201, 'Registration complete — payment submitted and awaiting admin verification', data);
     }
     catch (error) {
         next(error);
     }
 });
-exports.verifyRegistration = verifyRegistration;
+exports.completeWithPayment = completeWithPayment;

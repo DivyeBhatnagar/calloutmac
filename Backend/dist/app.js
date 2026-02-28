@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const path_1 = __importDefault(require("path"));
 const error_middleware_1 = require("./middlewares/error.middleware");
 // Routes imports
 const auth_routes_1 = __importDefault(require("./modules/auth/auth.routes"));
@@ -20,6 +21,12 @@ const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
+// Serve QR images from Backend/public/qr/ at route /qr
+const qrAssetsPath = path_1.default.join(__dirname, '..', 'public', 'qr');
+app.use('/qr', express_1.default.static(qrAssetsPath));
+// Serve uploaded images from Backend/public/uploads/ at route /uploads (local fallback)
+const uploadAssetsPath = path_1.default.join(__dirname, '..', 'public', 'uploads');
+app.use('/uploads', express_1.default.static(uploadAssetsPath));
 // Base route
 app.get('/api', (req, res) => {
     res.status(200).json({ success: true, message: 'Callout Esports API is running.' });

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminAuth = exports.db = void 0;
+exports.storage = exports.adminAuth = exports.db = void 0;
 const firebase_admin_1 = __importDefault(require("firebase-admin"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
@@ -18,7 +18,8 @@ if (!firebase_admin_1.default.apps.length) {
         if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
             const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('ascii'));
             firebase_admin_1.default.initializeApp({
-                credential: firebase_admin_1.default.credential.cert(serviceAccount)
+                credential: firebase_admin_1.default.credential.cert(serviceAccount),
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
             });
         }
         else {
@@ -26,7 +27,8 @@ if (!firebase_admin_1.default.apps.length) {
             // If running locally, this will likely fail unless the user sets it up.
             // But verifyIdToken can work without a private key if we at least provide the projectId!
             firebase_admin_1.default.initializeApp({
-                projectId: process.env.FIREBASE_PROJECT_ID || 'call-out-esports'
+                projectId: process.env.FIREBASE_PROJECT_ID || 'call-out-esports',
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.appspot.com`
             });
         }
     }
@@ -34,11 +36,22 @@ if (!firebase_admin_1.default.apps.length) {
         console.warn("Failed to initialize Firebase Admin with specific credentials. Ensure FIREBASE_SERVICE_ACCOUNT_BASE64 or GOOGLE_APPLICATION_CREDENTIALS is set.", error);
         // Best effort init
         try {
-            firebase_admin_1.default.initializeApp();
+            firebase_admin_1.default.initializeApp({
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.appspot.com`
+            });
         }
         catch (e) { } // Ignore duplicate init or failure
     }
 }
 exports.db = firebase_admin_1.default.firestore();
 exports.adminAuth = firebase_admin_1.default.auth();
+exports.storage = (() => {
+    try {
+        return firebase_admin_1.default.storage().bucket();
+    }
+    catch (e) {
+        console.warn("Storage bucket not initialized. Some features may not work.");
+        return null;
+    }
+})();
 exports.default = firebase_admin_1.default;

@@ -14,6 +14,7 @@ const firebase_admin_1 = require("../../config/firebase.admin");
 exports.userService = {
     getDashboardStats(userId) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             const registrationsSnapshot = yield firebase_admin_1.db.collection('registrations').where('userId', '==', userId).get();
             let activeRegistrations = 0;
             let completedTournaments = 0;
@@ -23,9 +24,9 @@ exports.userService = {
                 const tSnapshot = yield firebase_admin_1.db.collection('tournaments').doc(reg.tournamentId).get();
                 if (tSnapshot.exists) {
                     const tData = tSnapshot.data();
-                    if ((tData === null || tData === void 0 ? void 0 : tData.status) === 'ACTIVE')
+                    if (((_a = tData === null || tData === void 0 ? void 0 : tData.status) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === 'active')
                         activeRegistrations++;
-                    if ((tData === null || tData === void 0 ? void 0 : tData.status) === 'CLOSED')
+                    if (((_b = tData === null || tData === void 0 ? void 0 : tData.status) === null || _b === void 0 ? void 0 : _b.toLowerCase()) === 'closed')
                         completedTournaments++;
                 }
             }
