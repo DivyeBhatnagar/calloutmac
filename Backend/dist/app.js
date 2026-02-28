@@ -13,9 +13,10 @@ const user_routes_1 = __importDefault(require("./modules/users/user.routes"));
 const tournament_routes_1 = __importDefault(require("./modules/tournaments/tournament.routes"));
 const registration_routes_1 = __importDefault(require("./modules/registrations/registration.routes"));
 const payment_routes_1 = __importDefault(require("./modules/payments/payment.routes"));
-const query_routes_1 = __importDefault(require("./modules/queries/query.routes"));
 const admin_routes_1 = __importDefault(require("./modules/admin/admin.routes"));
 const analytics_routes_1 = __importDefault(require("./modules/analytics/analytics.routes"));
+const support_routes_1 = __importDefault(require("./modules/support/support.routes"));
+const admin_support_routes_1 = __importDefault(require("./modules/admin/admin-support.routes"));
 const app = (0, express_1.default)();
 // Middlewares
 app.use((0, cors_1.default)());
@@ -37,9 +38,10 @@ app.use('/api/dashboard', user_routes_1.default);
 app.use('/api/tournaments', tournament_routes_1.default);
 app.use('/api/registrations', registration_routes_1.default);
 app.use('/api/payments', payment_routes_1.default);
-app.use('/api/queries', query_routes_1.default); // Contains admin queries
 app.use('/api/admin/analytics', analytics_routes_1.default); // Put analytics before admin so it doesn't get grabbed by admin/:id
+app.use('/api/admin/support', admin_support_routes_1.default); // Admin side of new support tickets
 app.use('/api/admin', admin_routes_1.default);
+app.use('/api/support', support_routes_1.default); // User side of new support tickets
 // Error Handling Middleware
 app.use(error_middleware_1.errorHandler);
 exports.default = app;

@@ -9,9 +9,10 @@ import userRoutes from './modules/users/user.routes';
 import tournamentRoutes from './modules/tournaments/tournament.routes';
 import registrationRoutes from './modules/registrations/registration.routes';
 import paymentRoutes from './modules/payments/payment.routes';
-import queryRoutes from './modules/queries/query.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
+import supportRoutes from './modules/support/support.routes';
+import adminSupportRoutes from './modules/admin/admin-support.routes';
 
 const app: Application = express();
 
@@ -39,9 +40,11 @@ app.use('/api/dashboard', userRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/queries', queryRoutes); // Contains admin queries
 app.use('/api/admin/analytics', analyticsRoutes); // Put analytics before admin so it doesn't get grabbed by admin/:id
+app.use('/api/admin/support', adminSupportRoutes); // Admin side of new support tickets
 app.use('/api/admin', adminRoutes);
+
+app.use('/api/support', supportRoutes); // User side of new support tickets
 
 // Error Handling Middleware
 app.use(errorHandler);

@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
         { href: '/dashboard/admin/tournaments', label: 'Manage Tournaments', icon: RiTrophyFill },
         { href: '/dashboard/admin/registrations', label: 'Registrations', icon: RiAddCircleFill },
         { href: '/dashboard/admin/users', label: 'Users', icon: RiTeamFill },
-        { href: '/dashboard/admin/queries', label: 'User Queries', icon: RiMessage3Fill },
+        { href: '/dashboard/admin/support', label: 'Support Panel', icon: RiMessage3Fill },
         { href: '/dashboard/admin/analytics', label: 'Analytics', icon: RiBarChartGroupedFill },
     ];
 
