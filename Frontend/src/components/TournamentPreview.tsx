@@ -36,12 +36,12 @@ export function TournamentPreview() {
             <div className="container px-6 mx-auto relative z-10">
                 <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
                     <div>
-                        <h2 className="text-4xl md:text-5xl font-orbitron font-bold text-white uppercase text-glow">
+                        <h2 className="text-3xl md:text-5xl font-orbitron font-bold text-white uppercase text-glow text-center md:text-left">
                             Upcoming <span className="text-neon-green">Battles</span>
                         </h2>
                     </div>
-                    <Link href="/tournaments">
-                        <NeonButton variant="outline">View All Tournaments</NeonButton>
+                    <Link href="/tournaments" className="w-full md:w-auto">
+                        <NeonButton variant="outline" className="w-full md:w-auto">View All Tournaments</NeonButton>
                     </Link>
                 </div>
 

@@ -3,13 +3,13 @@
 import { useAuth } from '@/lib/auth-context';
 import { RiMenu3Fill, RiNotification3Fill } from 'react-icons/ri';
 
-export default function TopNavbar() {
+export default function TopNavbar({ onMenuClick }: { onMenuClick?: () => void }) {
     const { user } = useAuth();
 
     return (
         <header className="h-20 border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
             <div className="flex items-center gap-4 lg:hidden">
-                <button className="text-gray-400 hover:text-neon-green transition-colors">
+                <button onClick={onMenuClick} className="text-gray-400 hover:text-neon-green transition-colors">
                     <RiMenu3Fill className="text-2xl" />
                 </button>
             </div>

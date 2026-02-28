@@ -47,7 +47,7 @@ export function StatsStrip() {
             </div>
 
             <div className="container relative z-10 px-6 mx-auto">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-neon-green/20">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:divide-x divide-neon-green/20">
                     {stats.map((stat, i) => (
                         <motion.div
                             key={i}
@@ -55,7 +55,7 @@ export function StatsStrip() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: i * 0.1, duration: 0.5 }}
-                            className="flex flex-col items-center justify-center text-center px-4"
+                            className="flex flex-col items-center justify-center text-center px-4 py-4 sm:py-0 border-b sm:border-b-0 border-neon-green/10 last:border-b-0"
                         >
                             <div className="text-4xl lg:text-5xl font-orbitron font-bold text-white mb-2 text-glow transition-all duration-300">
                                 {stat.prefix}

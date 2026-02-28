@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${orbitron.variable} ${inter.variable} font-sans antialiased text-white bg-black`}
+        className={`${orbitron.variable} ${inter.variable} font-sans antialiased text-white bg-black overflow-x-hidden`}
       >
         <AuthProvider>
           <Header />

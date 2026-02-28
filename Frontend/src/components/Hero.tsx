@@ -59,21 +59,21 @@ export function Hero() {
                         Welcome to the Next Level
                     </motion.div>
 
-                    <h1 className="text-6xl lg:text-8xl font-black font-orbitron uppercase text-white leading-none tracking-tighter text-glow drop-shadow-lg">
+                    <h1 className="text-5xl md:text-6xl lg:text-8xl font-black font-orbitron uppercase text-white leading-none tracking-tighter text-glow drop-shadow-lg text-center lg:text-left mt-4 lg:mt-0">
                         CALLOUT <br />
                         <span className="text-neon-green">ESPORTS</span>
                     </h1>
 
-                    <p className="text-gray-400 text-lg lg:text-xl font-sans max-w-lg mb-4 drop-shadow-md">
+                    <p className="text-gray-400 text-base md:text-lg lg:text-xl font-sans max-w-lg mb-4 drop-shadow-md text-center lg:text-left">
                         India's Most Competitive Esports Battleground. Join elite tournaments, build your squad, and dominate the leaderboard.
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                        <Link href="/register">
-                            <NeonButton variant="solid">Join Tournament</NeonButton>
+                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 w-full sm:w-auto">
+                        <Link href="/register" className="w-full sm:w-auto">
+                            <NeonButton variant="solid" className="w-full">Join Tournament</NeonButton>
                         </Link>
-                        <Link href="/dashboard/tournaments">
-                            <NeonButton variant="outline">Explore Games</NeonButton>
+                        <Link href="/dashboard/tournaments" className="w-full sm:w-auto">
+                            <NeonButton variant="outline" className="w-full">Explore Games</NeonButton>
                         </Link>
                     </div>
                 </motion.div>
@@ -83,7 +83,7 @@ export function Hero() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 1, delay: 0.5 }}
-                    className="relative hidden lg:flex items-center justify-center p-8 w-full h-[500px]"
+                    className="relative flex items-center justify-center p-8 w-full h-[300px] md:h-[400px] lg:h-[500px]"
                 >
                     {/* Slow Pulse Glow */}
                     <motion.div

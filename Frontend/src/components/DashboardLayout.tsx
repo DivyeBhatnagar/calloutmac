@@ -2,9 +2,10 @@
 
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     return (
         <div className="flex h-screen bg-black overflow-hidden selection:bg-neon-green/30 selection:text-neon-green">
             {/* Background Effects */}
@@ -14,10 +15,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay"></div>
             </div>
 
-            <Sidebar />
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-            <div className="flex-1 flex flex-col relative z-10 w-full">
-                <TopNavbar />
+            <div className="flex-1 flex flex-col relative z-10 w-full overflow-hidden">
+                <TopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
                     <div className="max-w-7xl mx-auto">
                         {children}

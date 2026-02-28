@@ -38,7 +38,8 @@ export function Footer() {
     const socials = [
         { Icon: FaInstagram, href: "https://instagram.com/calloutesports" },
         { Icon: FaDiscord, href: "https://discord.gg/calloutesports" },
-        { Icon: FaYoutube, href: "https://youtube.com/@calloutesports" }
+        { Icon: FaYoutube, href: "https://youtube.com/@calloutesports" },
+        { Icon: FaLinkedin, href: "https://www.linkedin.com/company/callout-esports/" }
     ];
 
     return (
@@ -46,7 +47,7 @@ export function Footer() {
             <div className="container mx-auto px-6">
 
                 {/* Top Grid Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 lg:gap-8">
 
                     {/* Column 1 - BRAND */}
                     <div className="flex flex-col relative lg:col-span-1">
@@ -97,43 +98,17 @@ export function Footer() {
                             <FooterLink href="/about">About Us</FooterLink>
                             <FooterLink>Our Team</FooterLink>
                             <FooterLink>Careers</FooterLink>
-                            <FooterLink>Press & Media</FooterLink>
-                            <FooterLink href="/query">Contact Us</FooterLink>
+                            <FooterLink href="/contact">Contact Us</FooterLink>
                         </div>
                     </div>
 
-                    {/* Column 3 - PLATFORM */}
-                    <div className="flex flex-col">
-                        <h4 className="text-white font-bold text-lg mb-6 uppercase tracking-wider">Platform</h4>
-                        <div className="flex flex-col gap-4 text-sm font-medium">
-                            <FooterLink>How It Works</FooterLink>
-                            <FooterLink href="/tournaments">Tournaments</FooterLink>
-                            <FooterLink href="/games">Games</FooterLink>
-                            <FooterLink>Pricing</FooterLink>
-                            <FooterLink>FAQ</FooterLink>
-                        </div>
-                    </div>
-
-                    {/* Column 4 - SUPPORT */}
-                    <div className="flex flex-col">
-                        <h4 className="text-white font-bold text-lg mb-6 uppercase tracking-wider">Support</h4>
-                        <div className="flex flex-col gap-4 text-sm font-medium">
-                            <FooterLink>Help Center</FooterLink>
-                            <FooterLink href="/query">Submit Query</FooterLink>
-                            <FooterLink>Report Issue</FooterLink>
-                            <FooterLink href="/conduct">Community Guidelines</FooterLink>
-                            <FooterLink>Contact Support</FooterLink>
-                        </div>
-                    </div>
-
-                    {/* Column 5 - LEGAL */}
+                    {/* Column 3 - LEGAL */}
                     <div className="flex flex-col">
                         <h4 className="text-white font-bold text-lg mb-6 uppercase tracking-wider">Legal</h4>
                         <div className="flex flex-col gap-4 text-sm font-medium">
                             <FooterLink href="/terms">Terms of Service</FooterLink>
                             <FooterLink href="/privacy">Privacy Policy</FooterLink>
                             <FooterLink href="/refund">Refund Policy</FooterLink>
-                            <FooterLink href="/rules">Tournament Rules</FooterLink>
                             <FooterLink href="/conduct">Code of Conduct</FooterLink>
                         </div>
                     </div>
