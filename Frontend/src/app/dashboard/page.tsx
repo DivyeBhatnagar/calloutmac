@@ -11,10 +11,19 @@ import Link from 'next/link';
 
 export default function DashboardHome() {
     const { user } = useAuth();
-    
-    const { data: registrations, loading: regsLoading } = useRealtimeCollection<Registration>(
+
+    const { data: rawRegs, loading: regsLoading } = useRealtimeCollection<Registration>(
         'registrations',
-        user?.id ? [where('userId', '==', user.id), orderBy('registeredAt', 'desc')] : []
+        user?.id ? [where('userId', '==', user.id)] : []
+    );
+
+    const registrations = useMemo(
+        () => [...rawRegs].sort((a, b) => {
+            const ta = (a.createdAt ?? a.registeredAt)?.toMillis?.() ?? 0;
+            const tb = (b.createdAt ?? b.registeredAt)?.toMillis?.() ?? 0;
+            return tb - ta;
+        }),
+        [rawRegs]
     );
 
     const { data: tournaments } = useRealtimeCollection<Tournament>('tournaments', [
@@ -163,13 +172,12 @@ export default function DashboardHome() {
                                     <div className="flex items-center gap-6">
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500 uppercase tracking-wider">Payment</p>
-                                            <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                                reg.paymentVerified 
-                                                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/50' 
-                                                    : reg.paymentStatus === 'FAILED' 
-                                                    ? 'bg-red-500/20 text-red-500 border border-red-500/50' 
-                                                    : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
-                                            }`}>
+                                            <span className={`px-3 py-1 text-xs font-bold rounded-full ${reg.paymentVerified
+                                                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/50'
+                                                    : reg.paymentStatus === 'FAILED'
+                                                        ? 'bg-red-500/20 text-red-500 border border-red-500/50'
+                                                        : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
+                                                }`}>
                                                 {reg.paymentVerified ? '🟢 VERIFIED' : reg.paymentStatus === 'FAILED' ? '🔴 FAILED' : '🟡 PENDING'}
                                             </span>
                                         </div>
