@@ -25,7 +25,7 @@ export function Header() {
                 </Link>
 
                 {/* Desktop Nav */}
-                <nav className="hidden lg:flex items-center gap-8 font-mono text-sm uppercase tracking-wider text-gray-400">
+                <nav className="hidden xl:flex items-center gap-4 xl:gap-8 font-mono text-sm uppercase tracking-wider text-gray-400">
                     <Link href="/about" className="hover:text-neon-green transition-colors">About</Link>
                     <Link href="/tournaments" className="hover:text-neon-green transition-colors">Tournaments</Link>
                     <Link href="/games" className="hover:text-neon-green transition-colors">Games</Link>
@@ -33,7 +33,7 @@ export function Header() {
 
                 {/* Desktop Auth / User Controls */}
                 {!loading && (
-                    <div className="hidden lg:flex items-center gap-4">
+                    <div className="hidden xl:flex items-center gap-2 xl:gap-4">
                         {user ? (
                             <>
                                 <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -99,7 +99,7 @@ export function Header() {
 
                 {/* Mobile Hamburger Button */}
                 <button
-                    className="lg:hidden text-white text-3xl hover:text-neon-green transition-colors"
+                    className="xl:hidden text-white text-3xl hover:text-neon-green transition-colors"
                     onClick={toggleMenu}
                 >
                     {isMobileMenuOpen ? <RiCloseLine /> : <RiMenu3Line />}
@@ -113,7 +113,7 @@ export function Header() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="lg:hidden absolute top-20 left-0 w-full bg-black/95 backdrop-blur-xl border-b border-neon-green/20 overflow-hidden"
+                        className="xl:hidden absolute top-20 left-0 w-full bg-black/95 backdrop-blur-xl border-b border-neon-green/20 overflow-hidden"
                     >
                         <div className="flex flex-col px-6 py-6 space-y-6">
                             {/* Mobile Nav Links */}

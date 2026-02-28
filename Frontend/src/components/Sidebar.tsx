@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
     const links = viewMode === 'ADMIN' ? adminLinks : userLinks;
 
     const sidebarContent = (
-        <aside className="w-64 flex-shrink-0 border-r border-white/10 bg-black/95 md:bg-black/60 backdrop-blur-xl flex flex-col h-full absolute md:relative z-50 md:z-0 top-0 min-h-screen">
+        <aside className="w-64 flex-shrink-0 border-r border-white/10 bg-black/95 xl:bg-black/60 backdrop-blur-xl flex flex-col h-full absolute xl:relative z-50 xl:z-0 top-0 min-h-screen">
             <div className="p-6 border-b border-white/10 mb-6 flex justify-between items-center">
                 <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-105" onClick={onClose}>
                     <img src="/logo.png" alt="CallOut Esports Logo" className="w-[45px] h-[45px] object-contain drop-shadow-[0_0_8px_rgba(0,255,102,0.3)]" />
@@ -51,7 +51,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
                         <span className="text-neon-green glow-text text-sm mt-1">ESPORTS</span>
                     </div>
                 </Link>
-                <button className="md:hidden text-white hover:text-red-500 transition-colors" onClick={onClose}>
+                <button className="xl:hidden text-white hover:text-red-500 transition-colors" onClick={onClose}>
                     <RiCloseLine className="text-2xl" />
                 </button>
             </div>
@@ -128,14 +128,14 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
     return (
         <>
             {/* Desktop Sidebar */}
-            <div className="hidden md:block">
+            <div className="hidden xl:block">
                 {sidebarContent}
             </div>
 
             {/* Mobile Drawer Sidebar */}
             <AnimatePresence>
                 {isOpen && (
-                    <div className="md:hidden fixed inset-0 z-50">
+                    <div className="xl:hidden fixed inset-0 z-50">
                         {/* Overlay */}
                         <motion.div
                             initial={{ opacity: 0 }}

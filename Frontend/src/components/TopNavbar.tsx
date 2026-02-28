@@ -8,13 +8,13 @@ export default function TopNavbar({ onMenuClick }: { onMenuClick?: () => void })
 
     return (
         <header className="h-20 border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
-            <div className="flex items-center gap-4 lg:hidden">
+            <div className="flex items-center gap-4 xl:hidden">
                 <button onClick={onMenuClick} className="text-gray-400 hover:text-neon-green transition-colors">
                     <RiMenu3Fill className="text-2xl" />
                 </button>
             </div>
 
-            <div className="hidden lg:block">
+            <div className="hidden xl:block">
                 <h2 className="text-xl font-bold text-white/90">
                     Welcome back, <span className="text-neon-green glow-text drop-shadow-[0_0_8px_rgba(0,255,102,0.5)]">{user?.username}</span>
                 </h2>
