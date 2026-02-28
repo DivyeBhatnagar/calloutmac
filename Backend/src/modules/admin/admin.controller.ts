@@ -40,3 +40,16 @@ export const updateUserRole = async (req: Request, res: Response, next: NextFunc
         next(error);
     }
 };
+
+export const verifyRegistrationPayment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const registrationId = req.params.id as string;
+        // admin id extracted from the verified authenticated token
+        const adminId = req.user.id;
+
+        const data = await adminService.verifyRegistrationPayment(adminId, registrationId);
+        sendSuccess(res, 200, 'Registration payment formally verified', data);
+    } catch (error) {
+        next(error);
+    }
+};

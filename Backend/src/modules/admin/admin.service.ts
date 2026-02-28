@@ -89,5 +89,42 @@ export const adminService = {
         // NOTE: we don't strictly need to update custom claims here if we rely on DB role checks, 
         // but if we used Firebase auth custom claims we would do adminAuth.setCustomUserClaims(userId, { admin: role === 'ADMIN' })
         return { success: true, message: `User role updated to ${role}`, role };
+    },
+
+    async verifyRegistrationPayment(adminId: string, registrationId: string) {
+        const regRef = db.collection('registrations').doc(registrationId);
+        const regDoc = await regRef.get();
+
+        if (!regDoc.exists) {
+            throw { statusCode: 404, message: 'Registration not found' };
+        }
+
+        const regData = regDoc.data()!;
+        if (regData.paymentStatus === 'VERIFIED') {
+            throw { statusCode: 400, message: 'Payment is already verified' };
+        }
+
+        const batch = db.batch();
+
+        batch.update(regRef, {
+            paymentStatus: 'VERIFIED',
+            paymentVerified: true,
+            verifiedAt: new Date().toISOString(),
+            verifiedByAdminId: adminId
+        });
+
+        // Also update the linked payments collection if it exists
+        const paymentSnapshot = await db.collection('payments').where('registrationId', '==', registrationId).where('status', '==', 'PENDING').get();
+        paymentSnapshot.forEach(doc => {
+            batch.update(doc.ref, {
+                status: 'VERIFIED',
+                verifiedAt: new Date().toISOString(),
+                verifiedByAdminId: adminId
+            });
+        });
+
+        await batch.commit();
+
+        return { success: true, message: `Registration ${registrationId} payment verified.` };
     }
 };

@@ -7,7 +7,7 @@ import { Tournament } from "@/types";
 import Link from "next/link";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { useState, useEffect, useMemo } from "react";
-import { RiTrophyLine, RiGamepadLine, RiTeamLine } from "react-icons/ri";
+import { RiTrophyLine, RiGamepadLine, RiTeamLine, RiHotelLine } from "react-icons/ri";
 import Image from "next/image";
 
 const GAMES = [
@@ -79,10 +79,14 @@ export default function PublicGamesPage() {
 
                 <div className="space-y-20">
                     {GAMES.map((game, idx) => {
-                        const gameTournaments = tournaments.filter(t =>
-                            t.games?.[0]?.name?.toLowerCase().includes(game.name.toLowerCase()) ||
-                            game.name.toLowerCase().includes(t.games?.[0]?.name?.toLowerCase() || 'NO_MATCH')
-                        );
+                        const gameTournaments = tournaments.filter(t => {
+                            if (!t.games || t.games.length === 0) return true; // Show under all if no specific game is specified
+                            return t.games.some((g: any) => {
+                                const tName = g.name?.toLowerCase() || '';
+                                const gName = game.name.toLowerCase();
+                                return tName.includes(gName) || gName.includes(tName) || tName === 'all' || tName === 'any';
+                            });
+                        });
 
                         return (
                             <motion.div
@@ -128,7 +132,21 @@ export default function PublicGamesPage() {
                                                 <div>
                                                     <div className="flex justify-between items-start mb-6">
                                                         <div className="flex flex-col gap-2">
-                                                            {/* Removed undefined 'mode' field */}
+                                                            <span className="w-fit text-xs font-mono font-bold text-black bg-neon-green py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,102,0.4)]">
+                                                                <RiGamepadLine />
+                                                                {tourney.games?.map((g: any) => g.name).join(', ') || "ESPORTS"}
+                                                            </span>
+                                                            {tourney.colleges && tourney.colleges.length > 0 ? (
+                                                                <span className="w-fit text-xs font-mono font-bold text-black bg-yellow-400 py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(250,204,21,0.4)]">
+                                                                    <RiHotelLine />
+                                                                    {tourney.colleges.map((c: any) => c.name).join(', ')}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="w-fit text-xs font-mono font-bold text-black bg-blue-400 py-1 px-3 rounded uppercase tracking-wide flex items-center gap-1 shadow-[0_0_10px_rgba(96,165,250,0.4)]">
+                                                                    <RiHotelLine />
+                                                                    Open to All Colleges
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <span className="text-xs font-mono bg-red-600/20 border border-red-500/50 text-red-500 font-bold py-1 px-3 rounded uppercase flex items-center gap-1.5 animate-pulse">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
@@ -144,10 +162,10 @@ export default function PublicGamesPage() {
                                                         <div className="flex justify-between items-center border-b border-white/5 pb-3">
                                                             <div className="flex items-center gap-2 text-gray-400 font-sans text-sm">
                                                                 <RiTrophyLine className="text-neon-green" />
-                                                                <span>Prize Pool</span>
+                                                                <span>Entry Fee</span>
                                                             </div>
                                                             <span className="text-neon-green font-bold font-mono text-xl drop-shadow-[0_0_5px_rgba(0,255,102,0.5)]">
-                                                                ₹{tourney.paymentAmount || 0}
+                                                                {tourney.paymentAmount === 0 ? 'FREE' : `₹${tourney.paymentAmount}`}
                                                             </span>
                                                         </div>
                                                         <div className="flex justify-between items-center pt-1">

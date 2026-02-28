@@ -29,3 +29,23 @@ export const webhook = async (req: Request, res: Response, next: NextFunction) =
         next(error);
     }
 };
+
+// --- DYNAMIC QR PAYMENT ENDPOINTS ---
+
+export const assignQr = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const data = await paymentService.assignQr(req.user.id, req.body);
+        sendSuccess(res, 200, 'QR successfully assigned', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const submitPayment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const data = await paymentService.submitPayment(req.user.id, req.body);
+        sendSuccess(res, 200, 'Payment submitted successfully', data);
+    } catch (error) {
+        next(error);
+    }
+};

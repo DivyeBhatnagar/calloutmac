@@ -64,7 +64,7 @@ export function StatsSection() {
                         className="flex flex-col items-center justify-center p-6 group transition-all"
                     >
                         <div className="text-5xl font-black font-orbitron text-white group-hover:text-glow transition-all duration-300 relative">
-                            ₹<AnimatedCounter value={20} duration={1.5} />K+
+                            ₹<AnimatedCounter value={10} duration={1.5} />K+
                             <div className="h-1 w-0 group-hover:w-full bg-neon-green mt-2 transition-all duration-300 mx-auto neon-shadow" />
                         </div>
                         <div className="text-neon-green font-mono uppercase tracking-widest mt-4">
@@ -81,11 +81,11 @@ export function StatsSection() {
                         className="flex flex-col items-center justify-center p-6 group transition-all"
                     >
                         <div className="text-5xl font-black font-orbitron text-white group-hover:text-glow transition-all duration-300 relative">
-                            <AnimatedCounter value={50} duration={1.5} />+
+                            <AnimatedCounter value={20} duration={1.5} />+
                             <div className="h-1 w-0 group-hover:w-full bg-neon-green mt-2 transition-all duration-300 mx-auto neon-shadow" />
                         </div>
                         <div className="text-neon-green font-mono uppercase tracking-widest mt-4">
-                            Daily Matches
+                            Monthly Matches
                         </div>
                     </motion.div>
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import GlowCard from '@/components/GlowCard';
 import NeonButton from '@/components/NeonButton';
-import { RiAlertFill } from 'react-icons/ri';
+import { RiAlertFill, RiMoneyDollarCircleLine, RiGroupLine, RiGamepadLine, RiHotelLine } from 'react-icons/ri';
 
 export default function RegisterTournament() {
     const [tournaments, setTournaments] = useState<any[]>([]);
@@ -30,7 +30,7 @@ export default function RegisterTournament() {
             try {
                 const res = await api.get('/tournaments');
                 if (res.data.success) {
-                    const activeOnly = res.data.data.filter((t: any) => t.status === 'ACTIVE');
+                    const activeOnly = res.data.data.filter((t: any) => t.status?.toLowerCase() === 'active');
                     setTournaments(activeOnly);
                 }
             } catch (error) {
@@ -118,11 +118,75 @@ export default function RegisterTournament() {
                                 <option value="" disabled>-- Choose a Tournament --</option>
                                 {tournaments.map(t => (
                                     <option key={t.id} value={t.id} className="bg-gray-900 text-white">
-                                        {t.name} (Entry: ₹{t.entryFee})
+                                        {t.name} (Entry: {t.paymentAmount === 0 ? 'Free' : `₹${t.paymentAmount}`})
                                     </option>
                                 ))}
                             </select>
                         </div>
+
+                        {selectedTournament && (
+                            <div className="bg-black/40 border border-white/10 rounded-xl p-5 mt-4 space-y-4">
+                                <h3 className="text-xl font-orbitron font-bold text-neon-green border-b border-white/10 pb-2 mb-3">
+                                    Tournament Briefing
+                                </h3>
+
+                                {selectedTournament.description && (
+                                    <p className="text-sm text-gray-400">{selectedTournament.description}</p>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg">
+                                        <div className="w-10 h-10 rounded-full bg-neon-green/10 flex items-center justify-center text-neon-green">
+                                            <RiMoneyDollarCircleLine className="text-xl" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Registration Fee</p>
+                                            <p className="text-sm font-semibold text-white">
+                                                {selectedTournament.paymentAmount === 0 ? 'Free Entry' : `₹${selectedTournament.paymentAmount}`}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg">
+                                        <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                            <RiGroupLine className="text-xl" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Members / Slots</p>
+                                            <p className="text-sm font-semibold text-white">
+                                                {selectedTournament.currentRegistrations || 0} / {selectedTournament.maxSlots || 'Unlimited'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg">
+                                        <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400">
+                                            <RiGamepadLine className="text-xl" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Games</p>
+                                            <p className="text-sm font-semibold text-white truncate text-wrap">
+                                                {selectedTournament.games?.map((g: any) => g.name).join(', ') || 'Any Supported Game'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg">
+                                        <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-400">
+                                            <RiHotelLine className="text-xl" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Eligible Colleges</p>
+                                            <p className="text-sm font-semibold text-white truncate text-wrap">
+                                                {selectedTournament.colleges && selectedTournament.colleges.length > 0
+                                                    ? selectedTournament.colleges.map((c: any) => c.name).join(', ')
+                                                    : 'Open to All Colleges'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>

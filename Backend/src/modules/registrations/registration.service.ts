@@ -1,4 +1,4 @@
-import { db } from '../../config/firebase.admin';
+import admin, { db } from '../../config/firebase.admin';
 
 export const registrationService = {
     async createRegistration(userId: string, data: any) {
@@ -43,7 +43,10 @@ export const registrationService = {
             createdAt: new Date().toISOString()
         };
 
-        await newRegRef.set(regData);
+        const batch = db.batch();
+        batch.set(newRegRef, regData);
+        batch.update(tDoc.ref, { currentRegistrations: admin.firestore.FieldValue.increment(1) });
+        await batch.commit();
 
         return { id: newRegRef.id, ...regData };
     },

@@ -69,9 +69,20 @@ export function TournamentPreview() {
                             >
                                 <div>
                                     <div className="flex justify-between items-start mb-4">
-                                        <span className="text-xs font-mono text-neon-green border border-neon-green py-1 px-2 uppercase tracking-wide">
-                                            {tourney.games?.[0]?.name || "ESPORTS"}
-                                        </span>
+                                        <div className="flex flex-col gap-2">
+                                            <span className="w-fit text-xs font-mono text-black font-bold bg-neon-green border border-neon-green py-1 px-2 uppercase tracking-wide">
+                                                {tourney.games?.map((g: any) => g.name).join(', ') || "ESPORTS"}
+                                            </span>
+                                            {tourney.colleges && tourney.colleges.length > 0 ? (
+                                                <span className="w-fit text-xs font-mono text-black font-bold bg-yellow-400 border border-yellow-400 py-1 px-2 uppercase tracking-wide truncate max-w-[150px]">
+                                                    {tourney.colleges.map((c: any) => c.name).join(', ')}
+                                                </span>
+                                            ) : (
+                                                <span className="w-fit text-xs font-mono text-black font-bold bg-blue-400 border border-blue-400 py-1 px-2 uppercase tracking-wide truncate max-w-[150px]">
+                                                    All Colleges
+                                                </span>
+                                            )}
+                                        </div>
                                         <span className="text-xs font-mono bg-red-600 text-white font-bold py-1 px-3 uppercase animate-pulse">
                                             LIVE NOW
                                         </span>
@@ -83,9 +94,9 @@ export function TournamentPreview() {
 
                                     <div className="space-y-4 mb-8">
                                         <div className="flex justify-between border-b border-white/10 pb-2">
-                                            <span className="text-gray-400 font-sans text-sm">Prize Pool</span>
+                                            <span className="text-gray-400 font-sans text-sm">Entry Fee</span>
                                             <span className="text-neon-green font-bold font-mono text-lg">
-                                                ₹{tourney.paymentAmount || 0}
+                                                {tourney.paymentAmount === 0 ? 'FREE' : `₹${tourney.paymentAmount}`}
                                             </span>
                                         </div>
                                         <div className="flex justify-between pb-2">

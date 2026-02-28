@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { useRealtimeCollection } from '@/hooks/useRealtimeCollection';
-import { orderBy, doc, updateDoc, getFirestore } from 'firebase/firestore';
+import { orderBy, doc, updateDoc, deleteDoc, getFirestore, increment, getDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import GlowCard from '@/components/GlowCard';
-import { RiTeamLine, RiSearchLine, RiCheckLine, RiCloseLine, RiEyeLine, RiDownloadLine } from 'react-icons/ri';
+import { RiTeamLine, RiSearchLine, RiCheckLine, RiCloseLine, RiEyeLine, RiDownloadLine, RiDeleteBinLine } from 'react-icons/ri';
 import { Registration } from '@/types';
 
 export default function AdminRegistrationsPage() {
@@ -21,7 +21,7 @@ export default function AdminRegistrationsPage() {
 
     const filteredRegistrations = useMemo(() => {
         return registrations.filter(reg => {
-            const matchesSearch = searchTerm === '' || 
+            const matchesSearch = searchTerm === '' ||
                 reg.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 reg.iglName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 reg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,7 +41,7 @@ export default function AdminRegistrationsPage() {
         const verified = registrations.filter(r => r.paymentVerified).length;
         const pending = registrations.filter(r => !r.paymentVerified && r.paymentStatus === 'PENDING').length;
         const failed = registrations.filter(r => r.paymentStatus === 'FAILED').length;
-        
+
         return { total, verified, pending, failed };
     }, [registrations]);
 
@@ -66,20 +66,80 @@ export default function AdminRegistrationsPage() {
         }
     };
 
+    const handleDeleteRegistration = async (regId: string) => {
+        if (!confirm('WARNING: Are you sure you want to PERMANENTLY delete this registration? This action cannot be undone.')) return;
+
+        try {
+            const db = getFirestore(app);
+            const regDocRef = doc(db, 'registrations', regId);
+            const regSnapshot = await getDoc(regDocRef);
+
+            if (regSnapshot.exists()) {
+                const data = regSnapshot.data();
+                if (data.tournamentId) {
+                    await updateDoc(doc(db, 'tournaments', data.tournamentId), {
+                        currentRegistrations: increment(-1)
+                    });
+                }
+            }
+
+            await deleteDoc(regDocRef);
+            if (selectedReg?.id === regId) {
+                setSelectedReg(null);
+            }
+        } catch (error) {
+            console.error('Error deleting registration:', error);
+            alert('Failed to delete registration. Please try again.');
+        }
+    };
+
     const exportToCSV = () => {
-        const headers = ['Team Name', 'IGL', 'Contact', 'Email', 'Tournament', 'Game', 'College', 'Players', 'Payment Status', 'Registered Date'];
-        const rows = filteredRegistrations.map(reg => [
-            reg.teamName,
-            reg.iglName,
-            reg.iglContact,
-            reg.email,
-            reg.tournament,
-            reg.game,
-            reg.college || 'N/A',
-            reg.playerCount,
-            reg.paymentVerified ? 'VERIFIED' : reg.paymentStatus,
-            reg.registeredAt?.toDate?.().toLocaleDateString() || 'N/A'
-        ]);
+        // Assume maximum 6 players per team for static columns
+        const maxPlayers = 6;
+        const playerHeaders = [];
+        for (let i = 1; i <= maxPlayers; i++) {
+            playerHeaders.push(`Player ${i} Name`, `Player ${i} ID`);
+        }
+
+        const headers = [
+            'Registered By Username', 'Registered By Email', 'Registered By Phone',
+            'Team Name', 'IGL Name', 'IGL Contact',
+            'Tournament Name', 'Tournament Game', 'College', 'Total Players',
+            ...playerHeaders,
+            'Payment Status', 'Payment Amount', 'Bank Name', 'Transaction ID',
+            'UPI ID', 'Payment Date', 'Payment Time', 'QR Code Used', 'Registration Date & Time'
+        ];
+
+        const rows = filteredRegistrations.map(reg => {
+            const playerCells = [];
+            for (let i = 0; i < maxPlayers; i++) {
+                playerCells.push(reg.playerNames?.[i] || 'N/A');
+                playerCells.push(reg.playerIds?.[i] || 'N/A');
+            }
+
+            return [
+                reg.username || 'N/A',
+                reg.email || 'N/A',
+                reg.phoneNumber || 'N/A',
+                reg.teamName || 'N/A',
+                reg.iglName || 'N/A',
+                reg.iglContact || 'N/A',
+                reg.tournament || 'N/A',
+                reg.game || 'N/A',
+                reg.college || 'N/A',
+                reg.playerCount || 0,
+                ...playerCells,
+                reg.paymentVerified ? 'VERIFIED' : (reg.paymentStatus || 'N/A'),
+                reg.paymentDetails?.amount ? `Rs. ${reg.paymentDetails.amount}` : 'N/A',
+                reg.paymentDetails?.bankName || 'N/A',
+                reg.paymentDetails?.transactionId || 'N/A',
+                reg.paymentDetails?.upiId || 'N/A',
+                reg.paymentDetails?.paymentDate || 'N/A',
+                reg.paymentDetails?.paymentTime || 'N/A',
+                reg.paymentDetails?.qrCodeUsed || 'N/A',
+                reg.registeredAt?.toDate?.().toLocaleString() || 'N/A'
+            ];
+        });
 
         const csvContent = [headers, ...rows]
             .map(row => row.map(cell => `"${cell}"`).join(','))
@@ -216,13 +276,12 @@ export default function AdminRegistrationsPage() {
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                        reg.paymentVerified 
-                                            ? 'bg-neon-green/20 text-neon-green border border-neon-green/50' 
-                                            : reg.paymentStatus === 'FAILED' 
-                                            ? 'bg-red-500/20 text-red-500 border border-red-500/50' 
+                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${reg.paymentVerified
+                                        ? 'bg-neon-green/20 text-neon-green border border-neon-green/50'
+                                        : reg.paymentStatus === 'FAILED'
+                                            ? 'bg-red-500/20 text-red-500 border border-red-500/50'
                                             : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
-                                    }`}>
+                                        }`}>
                                         {reg.paymentVerified ? '🟢 VERIFIED' : reg.paymentStatus === 'FAILED' ? '🔴 FAILED' : '🟡 PENDING'}
                                     </span>
                                     <button
@@ -231,6 +290,13 @@ export default function AdminRegistrationsPage() {
                                         title="View Details"
                                     >
                                         <RiEyeLine className="text-white" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteRegistration(reg.id)}
+                                        className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors group"
+                                        title="Delete Registration"
+                                    >
+                                        <RiDeleteBinLine className="text-red-500 group-hover:text-red-400" />
                                     </button>
                                 </div>
                             </div>
@@ -246,13 +312,21 @@ export default function AdminRegistrationsPage() {
                     <div className="bg-gray-900 border border-white/20 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}>
                         <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-gray-900 z-10">
-                            <h2 className="text-2xl font-orbitron font-bold text-white">Registration Details</h2>
-                            <button onClick={() => setSelectedReg(null)} 
-                                className="text-gray-400 hover:text-white transition-colors">
-                                <RiCloseLine className="text-2xl" />
-                            </button>
+                            <h2 className="text-2xl font-orbitron font-bold text-white flex-1">Registration Details</h2>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleDeleteRegistration(selectedReg.id)}
+                                    className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold"
+                                >
+                                    <RiDeleteBinLine /> Delete
+                                </button>
+                                <button onClick={() => setSelectedReg(null)}
+                                    className="text-gray-400 hover:text-white transition-colors p-1">
+                                    <RiCloseLine className="text-2xl" />
+                                </button>
+                            </div>
                         </div>
-                        
+
                         <div className="p-6 space-y-6">
                             {/* Tournament & Team Info */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -302,11 +376,10 @@ export default function AdminRegistrationsPage() {
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
                                         <span className="text-gray-400">Status:</span>
-                                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                                            selectedReg.paymentVerified 
-                                                ? 'bg-neon-green/20 text-neon-green' 
-                                                : 'bg-yellow-500/20 text-yellow-500'
-                                        }`}>
+                                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${selectedReg.paymentVerified
+                                            ? 'bg-neon-green/20 text-neon-green'
+                                            : 'bg-yellow-500/20 text-yellow-500'
+                                            }`}>
                                             {selectedReg.paymentVerified ? 'VERIFIED' : 'PENDING'}
                                         </span>
                                     </div>
