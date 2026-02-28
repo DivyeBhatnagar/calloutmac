@@ -40,7 +40,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 };
 
 export const authorizeAdmin = (req: Request, res: Response, next: NextFunction) => {
-    if (req.user && req.user.role === 'ADMIN') {
+    if (req.user && req.user.role?.toUpperCase() === 'ADMIN') {
         next();
     } else {
         sendError(res, 403, 'Authorization failed: Admin access required');

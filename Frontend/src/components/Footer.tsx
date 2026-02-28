@@ -42,11 +42,11 @@ export function Footer() {
     ];
 
     return (
-        <footer className="bg-black relative overflow-hidden border-t border-[#00FF66] shadow-[0_-5px_20px_rgba(0,255,102,0.15)] z-10 pt-16 pb-6">
+        <footer className="bg-black relative overflow-hidden border-t border-[#00FF66] shadow-[0_-5px_20px_rgba(0,255,102,0.15)] z-10 pt-10 pb-4">
             <div className="container mx-auto px-6">
 
                 {/* Top Grid Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 min-h-[300px]">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8">
 
                     {/* Column 1 - BRAND */}
                     <div className="flex flex-col relative lg:col-span-1">
@@ -141,7 +141,7 @@ export function Footer() {
                 </div>
 
                 {/* Social Media Row */}
-                <div className="flex justify-center flex-wrap gap-4 mt-20 mb-12">
+                <div className="flex justify-center flex-wrap gap-4 mt-12 mb-6">
                     {socials.map((social, i) => (
                         <motion.a
                             key={i}
@@ -157,7 +157,7 @@ export function Footer() {
                 </div>
 
                 {/* Bottom Strip */}
-                <div className="border-t border-[#00FF66]/20 pt-6 mt-8 flex justify-center">
+                <div className="border-t border-[#00FF66]/20 pt-4 mt-6 flex justify-center">
                     <p className="text-gray-500 font-mono text-xs tracking-widest uppercase">
                         © 2026 CallOut Esports. All rights reserved.
                     </p>

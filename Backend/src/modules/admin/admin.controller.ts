@@ -29,3 +29,14 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
         next(error);
     }
 };
+
+export const updateUserRole = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string;
+        const { role } = req.body;
+        const data = await adminService.updateUserRole(id, role);
+        sendSuccess(res, 200, 'User role updated', data);
+    } catch (error) {
+        next(error);
+    }
+};

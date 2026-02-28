@@ -12,7 +12,7 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
         if (!loading) {
             if (!user) {
                 router.push('/login');
-            } else if (user.role !== 'ADMIN') {
+            } else if (user.role?.toUpperCase() !== 'ADMIN') {
                 router.push('/dashboard');
             }
         }
@@ -26,5 +26,5 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
         );
     }
 
-    return user?.role === 'ADMIN' ? <>{children}</> : null;
+    return user?.role?.toUpperCase() === 'ADMIN' ? <>{children}</> : null;
 }

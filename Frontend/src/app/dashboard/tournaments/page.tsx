@@ -1,36 +1,71 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import { useState, useMemo } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import { useRealtimeCollection } from '@/hooks/useRealtimeCollection';
+import { where, orderBy } from 'firebase/firestore';
 import GlowCard from '@/components/GlowCard';
-import { RiTrophyLine } from 'react-icons/ri';
+import { RiTrophyLine, RiTeamLine, RiUserLine, RiCloseLine, RiCalendarLine } from 'react-icons/ri';
+import { Registration } from '@/types';
 
 export default function MyTournaments() {
-    const [tournaments, setTournaments] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+    const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
+    
+    const { data: tournaments, loading } = useRealtimeCollection<Registration>(
+        'registrations',
+        user?.id ? [where('userId', '==', user.id), orderBy('registeredAt', 'desc')] : []
+    );
 
-    useEffect(() => {
-        const fetchTournaments = async () => {
-            try {
-                const res = await api.get('/dashboard/tournaments');
-                if (res.data.success) {
-                    setTournaments(res.data.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch tournaments", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchTournaments();
-    }, []);
+    const groupedByStatus = useMemo(() => {
+        const verified = tournaments.filter(r => r.paymentVerified);
+        const pending = tournaments.filter(r => !r.paymentVerified && r.paymentStatus === 'PENDING');
+        const failed = tournaments.filter(r => r.paymentStatus === 'FAILED');
+        return { verified, pending, failed };
+    }, [tournaments]);
 
     return (
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-orbitron font-bold text-white tracking-wider glow-text mb-2">MY DEPLOYMENTS</h1>
-                <p className="text-gray-400">History of all tournament registrations and their statuses.</p>
+                <p className="text-gray-400">Real-time updates • {tournaments.length} total registrations</p>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <GlowCard>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-gray-400 text-sm uppercase">Verified</p>
+                            <h3 className="text-2xl font-bold text-neon-green">{groupedByStatus.verified.length}</h3>
+                        </div>
+                        <div className="w-12 h-12 bg-neon-green/20 rounded-lg flex items-center justify-center">
+                            <RiTrophyLine className="text-neon-green text-xl" />
+                        </div>
+                    </div>
+                </GlowCard>
+                <GlowCard>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-gray-400 text-sm uppercase">Pending</p>
+                            <h3 className="text-2xl font-bold text-yellow-400">{groupedByStatus.pending.length}</h3>
+                        </div>
+                        <div className="w-12 h-12 bg-yellow-400/20 rounded-lg flex items-center justify-center">
+                            <RiCalendarLine className="text-yellow-400 text-xl" />
+                        </div>
+                    </div>
+                </GlowCard>
+                <GlowCard>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-gray-400 text-sm uppercase">Failed</p>
+                            <h3 className="text-2xl font-bold text-red-400">{groupedByStatus.failed.length}</h3>
+                        </div>
+                        <div className="w-12 h-12 bg-red-400/20 rounded-lg flex items-center justify-center">
+                            <RiCloseLine className="text-red-400 text-xl" />
+                        </div>
+                    </div>
+                </GlowCard>
             </div>
 
             {loading ? (
@@ -47,18 +82,20 @@ export default function MyTournaments() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {tournaments.map((reg, idx) => (
-                        <GlowCard key={idx} delay={idx * 0.1}>
+                        <GlowCard key={reg.id} delay={idx * 0.1} className="cursor-pointer hover:scale-[1.02] transition-transform"
+                            onClick={() => setSelectedReg(reg)}>
                             <div className="flex flex-col h-full justify-between">
                                 <div>
                                     <div className="flex justify-between items-start mb-4">
                                         <h3 className="text-xl font-orbitron font-bold text-white tracking-wide">
-                                            {reg.tournament?.name || 'Tournament'}
+                                            {reg.tournament || 'Tournament'}
                                         </h3>
-                                        <span className={`px-2 py-1 text-xs font-bold rounded uppercase ${reg.tournament?.status === 'ACTIVE' ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' :
-                                                reg.tournament?.status === 'CLOSED' ? 'bg-red-500/10 text-red-500 border border-red-500/30' :
-                                                    'bg-gray-500/10 text-gray-400 border border-gray-500/30'
-                                            }`}>
-                                            {reg.tournament?.status || 'UNKNOWN'}
+                                        <span className={`px-2 py-1 text-xs font-bold rounded uppercase ${
+                                            reg.status === 'ACTIVE' ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' :
+                                            reg.status === 'CLOSED' ? 'bg-red-500/10 text-red-500 border border-red-500/30' :
+                                            'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+                                        }`}>
+                                            {reg.status || 'ACTIVE'}
                                         </span>
                                     </div>
 
@@ -73,23 +110,106 @@ export default function MyTournaments() {
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-500 text-sm">Registered On</span>
-                                            <span className="text-gray-300 text-sm">{new Date(reg.createdAt).toLocaleDateString()}</span>
+                                            <span className="text-gray-300 text-sm">
+                                                {reg.registeredAt?.toDate?.().toLocaleDateString() || 'N/A'}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="pt-4 border-t border-white/10 flex justify-between items-center">
                                     <span className="text-sm text-gray-400">Payment Status</span>
-                                    <span className={`px-3 py-1 text-xs font-bold rounded ${reg.paymentStatus === 'VERIFIED' ? 'bg-neon-green/20 text-neon-green border border-neon-green/50' :
-                                            reg.paymentStatus === 'FAILED' ? 'bg-red-500/20 text-red-500 border border-red-500/50' :
-                                                'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
-                                        }`}>
-                                        {reg.paymentStatus}
+                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${
+                                        reg.paymentVerified ? 'bg-neon-green/20 text-neon-green border border-neon-green/50' :
+                                        reg.paymentStatus === 'FAILED' ? 'bg-red-500/20 text-red-500 border border-red-500/50' :
+                                        'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
+                                    }`}>
+                                        {reg.paymentVerified ? '🟢 VERIFIED' : reg.paymentStatus === 'FAILED' ? '🔴 FAILED' : '🟡 PENDING'}
                                     </span>
                                 </div>
                             </div>
                         </GlowCard>
                     ))}
+                </div>
+            )}
+
+            {/* Details Modal */}
+            {selectedReg && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    onClick={() => setSelectedReg(null)}>
+                    <div className="bg-gray-900 border border-white/20 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                        onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-gray-900 z-10">
+                            <h2 className="text-2xl font-orbitron font-bold text-white">Registration Details</h2>
+                            <button onClick={() => setSelectedReg(null)} 
+                                className="text-gray-400 hover:text-white transition-colors">
+                                <RiCloseLine className="text-2xl" />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            {/* Tournament Info */}
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-3">Tournament Information</h3>
+                                <div className="space-y-2 text-sm">
+                                    <p className="text-gray-400">Tournament: <span className="text-white">{selectedReg.tournament}</span></p>
+                                    <p className="text-gray-400">Game: <span className="text-white">{selectedReg.game}</span></p>
+                                    {selectedReg.college && (
+                                        <p className="text-gray-400">College: <span className="text-white">{selectedReg.college}</span></p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Team Info */}
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-3">Team Information</h3>
+                                <div className="space-y-2 text-sm">
+                                    <p className="text-gray-400">Team Name: <span className="text-white font-semibold">{selectedReg.teamName}</span></p>
+                                    <p className="text-gray-400">IGL: <span className="text-white">{selectedReg.iglName}</span></p>
+                                    <p className="text-gray-400">IGL Contact: <span className="text-white">{selectedReg.iglContact}</span></p>
+                                    <p className="text-gray-400">Player Count: <span className="text-white">{selectedReg.playerCount}</span></p>
+                                </div>
+                            </div>
+
+                            {/* Players */}
+                            {selectedReg.playerNames && selectedReg.playerNames.length > 0 && (
+                                <div>
+                                    <h3 className="text-lg font-bold text-white mb-3">Team Roster</h3>
+                                    <div className="space-y-2">
+                                        {selectedReg.playerNames.map((name, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                                                <span className="text-white">{name}</span>
+                                                <span className="text-gray-400 text-sm">{selectedReg.playerIds?.[idx]}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Payment Info */}
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-3">Payment Information</h3>
+                                <div className="space-y-2 text-sm">
+                                    <p className="text-gray-400">Status: 
+                                        <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
+                                            selectedReg.paymentVerified 
+                                                ? 'bg-neon-green/20 text-neon-green' 
+                                                : 'bg-yellow-500/20 text-yellow-500'
+                                        }`}>
+                                            {selectedReg.paymentVerified ? 'VERIFIED' : 'PENDING'}
+                                        </span>
+                                    </p>
+                                    {selectedReg.paymentDetails && (
+                                        <>
+                                            <p className="text-gray-400">Transaction ID: <span className="text-white">{selectedReg.paymentDetails.transactionId}</span></p>
+                                            <p className="text-gray-400">Amount: <span className="text-white">₹{selectedReg.paymentDetails.amount}</span></p>
+                                            <p className="text-gray-400">Date: <span className="text-white">{selectedReg.paymentDetails.paymentDate}</span></p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

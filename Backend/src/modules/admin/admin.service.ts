@@ -24,7 +24,8 @@ export const adminService = {
     },
 
     async getAllUsers() {
-        const usersSnapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
+        // Removed orderBy('createdAt', 'desc') because Firestore excludes documents without this field
+        const usersSnapshot = await db.collection('users').get();
         const result = [];
 
         for (const doc of usersSnapshot.docs) {
@@ -33,13 +34,20 @@ export const adminService = {
 
             result.push({
                 id: doc.id,
-                username: data.username,
-                email: data.email,
-                role: data.role,
-                createdAt: data.createdAt,
+                username: data.username || 'Unknown Operator',
+                email: data.email || 'No Email',
+                role: data.role || 'USER',
+                createdAt: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) : null,
                 _count: { registrations: regSnapshot.size }
             });
         }
+
+        // Sort locally
+        result.sort((a, b) => {
+            if (!a.createdAt) return 1;
+            if (!b.createdAt) return -1;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
 
         return result;
     },
@@ -69,5 +77,17 @@ export const adminService = {
         await batch.commit();
 
         return { success: true, message: `User ${userId} deleted` };
+    },
+
+    async updateUserRole(userId: string, role: string) {
+        const userRef = db.collection('users').doc(userId);
+        const doc = await userRef.get();
+        if (!doc.exists) {
+            throw new Error('User not found');
+        }
+        await userRef.update({ role });
+        // NOTE: we don't strictly need to update custom claims here if we rely on DB role checks, 
+        // but if we used Firebase auth custom claims we would do adminAuth.setCustomUserClaims(userId, { admin: role === 'ADMIN' })
+        return { success: true, message: `User role updated to ${role}`, role };
     }
 };

@@ -12,13 +12,14 @@ import {
     RiShieldUserFill,
     RiLogoutBoxFill,
     RiBarChartGroupedFill,
-    RiTeamFill
+    RiTeamFill,
+    RiArrowLeftRightLine
 } from 'react-icons/ri';
 import { motion } from 'framer-motion';
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const { user, logout } = useAuth();
+    const { user, logout, viewMode, toggleViewMode } = useAuth();
 
     const userLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: RiDashboardFill },
@@ -37,9 +38,7 @@ export default function Sidebar() {
         { href: '/dashboard/admin/analytics', label: 'Analytics', icon: RiBarChartGroupedFill },
     ];
 
-    const links = user?.role === 'ADMIN' && pathname.startsWith('/dashboard/admin')
-        ? adminLinks
-        : userLinks;
+    const links = viewMode === 'ADMIN' ? adminLinks : userLinks;
 
     return (
         <aside className="w-64 flex-shrink-0 border-r border-white/10 bg-black/60 backdrop-blur-xl hidden md:flex flex-col h-full sticky top-0 min-h-screen">
@@ -53,21 +52,30 @@ export default function Sidebar() {
             </div>
 
             <nav className="flex-1 px-4 space-y-2">
-                {user?.role === 'ADMIN' && (
-                    <div className="mb-4 flex flex-col gap-2">
-                        <Link
-                            href="/dashboard"
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${!pathname.startsWith('/dashboard/admin') ? 'bg-neon-green/10 text-neon-green border border-neon-green/30 shadow-[inset_0_0_10px_rgba(0,255,102,0.1)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                {/* Mode Toggle for Admins */}
+                {user?.role.toUpperCase() === 'ADMIN' && (
+                    <div className="mb-4">
+                        <button
+                            onClick={toggleViewMode}
+                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                                viewMode === 'ADMIN'
+                                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/50 hover:bg-neon-green/30 shadow-[0_0_15px_rgba(0,255,102,0.2)]'
+                                    : 'bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                            }`}
                         >
-                            <RiUserFill className="text-xl" /> User View
-                        </Link>
-                        <Link
-                            href="/dashboard/admin"
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${pathname.startsWith('/dashboard/admin') ? 'bg-red-500/10 text-red-400 border border-red-500/30 shadow-[inset_0_0_10px_rgba(239,68,68,0.1)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                        >
-                            <RiShieldUserFill className="text-xl" /> Admin View
-                        </Link>
-                        <div className="h-px bg-white/10 my-2"></div>
+                            <RiArrowLeftRightLine className="text-xl" />
+                            {viewMode === 'ADMIN' ? 'Switch to User' : 'Switch to Admin'}
+                        </button>
+                        <div className="h-px bg-white/10 my-4"></div>
+                        
+                        {/* Mode Indicator */}
+                        <div className={`px-4 py-2 rounded-lg text-center text-sm font-semibold mb-2 ${
+                            viewMode === 'ADMIN'
+                                ? 'bg-neon-green/10 text-neon-green border border-neon-green/30'
+                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                        }`}>
+                            {viewMode === 'ADMIN' ? '🛡️ ADMIN MODE' : '👤 USER MODE'}
+                        </div>
                     </div>
                 )}
 
