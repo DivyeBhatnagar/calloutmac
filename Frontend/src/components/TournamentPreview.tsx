@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 
 export function TournamentPreview() {
     const { data: allTournaments, loading } = useRealtimeCollection<Tournament>("tournaments", [
-        where("status", "==", "ACTIVE")
+        where("status", "in", ["ACTIVE", "active"])
     ]);
 
     const [tournaments, setTournaments] = useState<Tournament[]>([]);

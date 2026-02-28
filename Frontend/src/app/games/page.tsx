@@ -21,7 +21,7 @@ const GAMES = [
 export default function PublicGamesPage() {
     const { user } = useAuth();
     const { data: allTournaments, loading } = useRealtimeCollection<Tournament>("tournaments", [
-        where("status", "==", "ACTIVE")
+        where("status", "in", ["ACTIVE", "active"])
     ]);
 
     const [tournaments, setTournaments] = useState<Tournament[]>([]);

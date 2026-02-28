@@ -13,7 +13,7 @@ import { RiTrophyLine, RiGamepadLine, RiTeamLine, RiHotelLine, RiTimerLine } fro
 export default function PublicTournamentsPage() {
     const { user } = useAuth();
     const { data: allTournaments, loading } = useRealtimeCollection<Tournament>("tournaments", [
-        where("status", "==", "ACTIVE")
+        where("status", "in", ["ACTIVE", "active"])
     ]);
 
     const [tournaments, setTournaments] = useState<Tournament[]>([]);

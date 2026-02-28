@@ -24,7 +24,7 @@ exports.adminService = {
         return __awaiter(this, void 0, void 0, function* () {
             const usersSnapshot = yield firebase_admin_1.db.collection('users').get();
             const tournamentsSnapshot = yield firebase_admin_1.db.collection('tournaments').get();
-            const activeTournamentsSnapshot = yield firebase_admin_1.db.collection('tournaments').where('status', '==', 'active').get();
+            const activeTournamentsSnapshot = yield firebase_admin_1.db.collection('tournaments').where('status', 'in', ['ACTIVE', 'active']).get();
             const registrationsSnapshot = yield firebase_admin_1.db.collection('registrations').get();
             let totalRevenue = 0;
             registrationsSnapshot.forEach(doc => {

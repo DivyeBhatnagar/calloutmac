@@ -10,7 +10,7 @@ export const adminService = {
     async getAdminStats() {
         const usersSnapshot = await db.collection('users').get();
         const tournamentsSnapshot = await db.collection('tournaments').get();
-        const activeTournamentsSnapshot = await db.collection('tournaments').where('status', '==', 'active').get();
+        const activeTournamentsSnapshot = await db.collection('tournaments').where('status', 'in', ['ACTIVE', 'active']).get();
         const registrationsSnapshot = await db.collection('registrations').get();
 
         let totalRevenue = 0;
