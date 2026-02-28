@@ -12,12 +12,16 @@ export const registrationService = {
 
         const tournamentData = tDoc.data();
 
-        if (tournamentData?.status !== 'ACTIVE') {
+        const status = (tournamentData?.status || '').toLowerCase();
+        if (status !== 'active') {
             throw { statusCode: 400, message: 'Tournament is not active' };
         }
 
         const regCountSnapshot = await db.collection('registrations').where('tournamentId', '==', tournamentId).get();
-        if (regCountSnapshot.size >= (tournamentData?.maxSlots || 0)) {
+        const maxSlots = tournamentData?.maxSlots || 0;
+
+        // Only enforce limit if maxSlots is greater than 0
+        if (maxSlots > 0 && regCountSnapshot.size >= maxSlots) {
             throw { statusCode: 400, message: 'Tournament is full' };
         }
 

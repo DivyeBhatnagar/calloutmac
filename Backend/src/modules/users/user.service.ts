@@ -13,8 +13,8 @@ export const userService = {
             const tSnapshot = await db.collection('tournaments').doc(reg.tournamentId).get();
             if (tSnapshot.exists) {
                 const tData = tSnapshot.data();
-                if (tData?.status === 'ACTIVE') activeRegistrations++;
-                if (tData?.status === 'CLOSED') completedTournaments++;
+                if (tData?.status?.toLowerCase() === 'active') activeRegistrations++;
+                if (tData?.status?.toLowerCase() === 'closed') completedTournaments++;
             }
         }
 
