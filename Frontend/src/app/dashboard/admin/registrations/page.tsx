@@ -16,7 +16,7 @@ export default function AdminRegistrationsPage() {
 
     const { data: registrations, loading } = useRealtimeCollection<Registration>(
         'registrations',
-        [orderBy('registeredAt', 'desc')]
+        [orderBy('createdAt', 'desc')]
     );
 
     const filteredRegistrations = useMemo(() => {
@@ -24,8 +24,7 @@ export default function AdminRegistrationsPage() {
             const matchesSearch = searchTerm === '' ||
                 reg.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 reg.iglName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                reg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                reg.phoneNumber.includes(searchTerm);
+                (reg.iglContact || '').toLowerCase().includes(searchTerm.toLowerCase());
 
             const matchesStatus = statusFilter === 'all' ||
                 (statusFilter === 'verified' && reg.paymentVerified) ||
@@ -127,17 +126,17 @@ export default function AdminRegistrationsPage() {
                 reg.tournament || 'N/A',
                 reg.game || 'N/A',
                 reg.college || 'N/A',
-                reg.playerCount || 0,
+                reg.playerNames?.length || 0,
                 ...playerCells,
                 reg.paymentVerified ? 'VERIFIED' : (reg.paymentStatus || 'N/A'),
-                reg.paymentDetails?.amount ? `Rs. ${reg.paymentDetails.amount}` : 'N/A',
-                reg.paymentDetails?.bankName || 'N/A',
-                reg.paymentDetails?.transactionId || 'N/A',
-                reg.paymentDetails?.upiId || 'N/A',
-                reg.paymentDetails?.paymentDate || 'N/A',
-                reg.paymentDetails?.paymentTime || 'N/A',
-                reg.paymentDetails?.qrCodeUsed || 'N/A',
-                reg.registeredAt?.toDate?.().toLocaleString() || 'N/A'
+                reg.payment?.amount ? `Rs. ${reg.payment.amount}` : 'N/A',
+                reg.payment?.bankName || 'N/A',
+                reg.payment?.transactionId || 'N/A',
+                reg.payment?.upiId || 'N/A',
+                reg.payment?.paymentDate || 'N/A',
+                reg.payment?.paymentTime || 'N/A',
+                reg.qrIndex != null ? `QR${reg.qrIndex}` : 'N/A',
+                (reg.createdAt ?? reg.registeredAt)?.toDate?.().toLocaleString() || 'N/A'
             ];
         });
 
@@ -270,7 +269,7 @@ export default function AdminRegistrationsPage() {
                                                 </>
                                             )}
                                             <span>•</span>
-                                            <span>{reg.playerCount} players</span>
+                                            <span>{reg.playerNames?.length || 0} players</span>
                                         </div>
                                     </div>
                                 </div>
@@ -339,7 +338,7 @@ export default function AdminRegistrationsPage() {
                                             <p className="text-gray-400">College: <span className="text-white">{selectedReg.college}</span></p>
                                         )}
                                         <p className="text-gray-400">Registered: <span className="text-white">
-                                            {selectedReg.registeredAt?.toDate?.().toLocaleString() || 'N/A'}
+                                            {(selectedReg.createdAt ?? selectedReg.registeredAt)?.toDate?.().toLocaleString() || 'N/A'}
                                         </span></p>
                                     </div>
                                 </div>
@@ -384,36 +383,36 @@ export default function AdminRegistrationsPage() {
                                         </span>
                                     </div>
 
-                                    {selectedReg.paymentDetails && (
+                                    {selectedReg.payment && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                                             <div className="p-3 bg-white/5 rounded-lg">
                                                 <p className="text-gray-400 mb-1">Bank Name</p>
-                                                <p className="text-white font-semibold">{selectedReg.paymentDetails.bankName}</p>
+                                                <p className="text-white font-semibold">{selectedReg.payment.bankName || 'N/A'}</p>
                                             </div>
                                             <div className="p-3 bg-white/5 rounded-lg">
                                                 <p className="text-gray-400 mb-1">Transaction ID</p>
-                                                <p className="text-white font-semibold">{selectedReg.paymentDetails.transactionId}</p>
+                                                <p className="text-white font-semibold font-mono">{selectedReg.payment.transactionId}</p>
                                             </div>
                                             <div className="p-3 bg-white/5 rounded-lg">
                                                 <p className="text-gray-400 mb-1">Amount</p>
-                                                <p className="text-white font-semibold">₹{selectedReg.paymentDetails.amount}</p>
+                                                <p className="text-white font-semibold">{selectedReg.payment.amount ? `₹${selectedReg.payment.amount}` : 'N/A'}</p>
                                             </div>
                                             <div className="p-3 bg-white/5 rounded-lg">
                                                 <p className="text-gray-400 mb-1">UPI ID</p>
-                                                <p className="text-white font-semibold">{selectedReg.paymentDetails.upiId}</p>
+                                                <p className="text-white font-semibold">{selectedReg.payment.upiId || 'N/A'}</p>
                                             </div>
                                             <div className="p-3 bg-white/5 rounded-lg">
                                                 <p className="text-gray-400 mb-1">Payment Date</p>
-                                                <p className="text-white font-semibold">{selectedReg.paymentDetails.paymentDate}</p>
+                                                <p className="text-white font-semibold">{selectedReg.payment.paymentDate || 'N/A'}</p>
                                             </div>
                                             <div className="p-3 bg-white/5 rounded-lg">
                                                 <p className="text-gray-400 mb-1">Payment Time</p>
-                                                <p className="text-white font-semibold">{selectedReg.paymentDetails.paymentTime}</p>
+                                                <p className="text-white font-semibold">{selectedReg.payment.paymentTime || 'N/A'}</p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {!selectedReg.paymentVerified && selectedReg.paymentDetails && (
+                                    {!selectedReg.paymentVerified && (
                                         <button
                                             onClick={() => handleVerifyPayment(selectedReg.id)}
                                             disabled={verifying}

@@ -1,8 +1,13 @@
+import admin, { db } from '../../config/firebase.admin';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { db } from '../../config/firebase.admin';
 
 export const paymentService = {
+
+    // ============================================================
+    // LEGACY RAZORPAY FLOW (preserved, not part of QR system)
+    // ============================================================
+
     async createOrder(userId: string, data: any) {
         const razorpay = new Razorpay({
             key_id: process.env.RAZORPAY_KEY_ID || '',
@@ -12,40 +17,35 @@ export const paymentService = {
         const { registrationId } = data;
 
         const regDoc = await db.collection('registrations').doc(registrationId).get();
-
         if (!regDoc.exists || regDoc.data()?.userId !== userId) {
             throw { statusCode: 404, message: 'Registration not found or unauthorized' };
         }
 
         const regData = regDoc.data()!;
-
         if (regData.paymentStatus === 'VERIFIED') {
             throw { statusCode: 400, message: 'Payment already verified' };
         }
 
         const tDoc = await db.collection('tournaments').doc(regData.tournamentId).get();
-        const entryFee = tDoc.data()?.entryFee || 0;
-
-        const amount = entryFee * 100; // in paise
+        const entryFee = tDoc.data()?.entryFee ?? tDoc.data()?.paymentAmount ?? 0;
+        const amount = entryFee * 100; // paise
 
         const options = {
             amount,
-            currency: "INR",
+            currency: 'INR',
             receipt: `receipt_${registrationId}`,
         };
 
         const order = await razorpay.orders.create(options);
 
         const newPaymentRef = db.collection('payments').doc();
-        const paymentData = {
+        await newPaymentRef.set({
             registrationId,
             amount: entryFee,
             orderId: order.id,
             status: 'PENDING',
-            createdAt: new Date().toISOString()
-        };
-
-        await newPaymentRef.set(paymentData);
+            createdAt: admin.firestore.Timestamp.now()
+        });
 
         return order;
     },
@@ -53,53 +53,47 @@ export const paymentService = {
     async verifyPayment(data: any) {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, registrationId } = data;
 
-        const body = razorpay_order_id + "|" + razorpay_payment_id;
-
+        const body = razorpay_order_id + '|' + razorpay_payment_id;
         const expectedSignature = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || '')
-            .update(body.toString())
-            .digest("hex");
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+            .update(body)
+            .digest('hex');
 
         if (expectedSignature !== razorpay_signature) {
             throw { statusCode: 400, message: 'Invalid payment signature' };
         }
 
         const pSnapshot = await db.collection('payments').where('orderId', '==', razorpay_order_id).get();
-
         const batch = db.batch();
 
         if (!pSnapshot.empty) {
-            const pDocRef = db.collection('payments').doc(pSnapshot.docs[0].id);
-            batch.update(pDocRef, {
+            batch.update(db.collection('payments').doc(pSnapshot.docs[0].id), {
                 paymentId: razorpay_payment_id,
                 signature: razorpay_signature,
                 status: 'VERIFIED'
             });
         }
 
-        const rDocRef = db.collection('registrations').doc(registrationId);
-        batch.update(rDocRef, { paymentStatus: 'VERIFIED' });
+        batch.update(db.collection('registrations').doc(registrationId), {
+            paymentStatus: 'VERIFIED'
+        });
 
         await batch.commit();
-
         return { success: true };
     },
 
     async handleWebhook(body: any, signature: string) {
         const secret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
-
         const expectedSignature = crypto
-            .createHmac("sha256", secret)
+            .createHmac('sha256', secret)
             .update(JSON.stringify(body))
-            .digest("hex");
+            .digest('hex');
 
         if (expectedSignature !== signature) {
             throw { statusCode: 400, message: 'Invalid webhook signature' };
         }
 
-        const event = body.event;
-
-        if (event === 'payment.captured') {
+        if (body.event === 'payment.captured') {
             const paymentEntity = body.payload.payment.entity;
             const orderId = paymentEntity.order_id;
 
@@ -109,10 +103,13 @@ export const paymentService = {
                 const pData = pDoc.data();
                 if (pData.status !== 'VERIFIED') {
                     const batch = db.batch();
-
-                    batch.update(db.collection('payments').doc(pDoc.id), { status: 'VERIFIED', paymentId: paymentEntity.id });
-                    batch.update(db.collection('registrations').doc(pData.registrationId), { paymentStatus: 'VERIFIED' });
-
+                    batch.update(db.collection('payments').doc(pDoc.id), {
+                        status: 'VERIFIED',
+                        paymentId: paymentEntity.id
+                    });
+                    batch.update(db.collection('registrations').doc(pData.registrationId), {
+                        paymentStatus: 'VERIFIED'
+                    });
                     await batch.commit();
                 }
             }
@@ -121,22 +118,34 @@ export const paymentService = {
         return { received: true };
     },
 
-    // ==========================================
-    // DYNAMIC QR ROUND-ROBIN IMPLEMENTATION
-    // ==========================================
-
+    // ============================================================
+    // STEP 6 — DYNAMIC QR ASSIGNMENT (ROUND-ROBIN)
+    // POST /api/payments/assign-qr
+    // Used by the OLD two-step flow (kept for backward compatibility).
+    // New flow: use GET /api/payments/preview-qr + POST /api/registrations/complete-with-payment
+    // ============================================================
     async assignQr(userId: string, data: any) {
         const { registrationId } = data;
 
-        // 1. Validate registration
+        if (!registrationId) {
+            throw { statusCode: 400, message: 'registrationId is required' };
+        }
+
         const regDoc = await db.collection('registrations').doc(registrationId).get();
         if (!regDoc.exists || regDoc.data()?.userId !== userId) {
             throw { statusCode: 404, message: 'Registration not found or unauthorized' };
         }
 
         const regData = regDoc.data()!;
-        if (regData.paymentStatus === 'VERIFIED') {
-            throw { statusCode: 400, message: 'Payment already verified' };
+
+        if (regData.paymentStatus !== 'INITIATED') {
+            if (regData.paymentStatus === 'PENDING') {
+                throw { statusCode: 400, message: 'Payment already submitted — awaiting admin verification' };
+            }
+            if (regData.paymentStatus === 'VERIFIED') {
+                throw { statusCode: 400, message: 'Payment already verified' };
+            }
+            throw { statusCode: 400, message: `Cannot assign QR: current status is ${regData.paymentStatus}` };
         }
 
         const tDoc = await db.collection('tournaments').doc(regData.tournamentId).get();
@@ -144,77 +153,71 @@ export const paymentService = {
             throw { statusCode: 404, message: 'Tournament not found' };
         }
 
-        const amount = tDoc.data()?.paymentAmount || 0; // fallback to paymentAmount field instead of entryFee for consistency
+        const tData = tDoc.data()!;
+        const amount: number = tData.entryFee ?? tData.paymentAmount ?? 0;
 
         if (amount === 0) {
-            throw { statusCode: 400, message: 'This tournament is free, no QR assignment needed' };
+            throw { statusCode: 400, message: 'This tournament is free — no QR assignment needed' };
         }
 
         let assignedQr: any = null;
-        let qrIndexToAssign: number = 0;
+        let qrIndexAssigned: number = 0;
 
-        // 2. Perform Atomic Transaction for Round-Robin QR Assignment
         await db.runTransaction(async (transaction) => {
             const systemRef = db.collection('system_settings').doc('qr_rotation');
             const sysDoc = await transaction.get(systemRef);
 
             if (!sysDoc.exists) {
-                throw { statusCode: 500, message: 'System settings for QR rotation not found' };
+                throw { statusCode: 500, message: 'QR rotation system settings not found — contact admin' };
             }
 
             const sysData = sysDoc.data()!;
-            let currentIndex = sysData.currentIndex || 0;
-            const totalQRs = sysData.totalQRs || 5;
+            const currentIndex: number = sysData.currentIndex ?? 0;
+            const totalQRs: number = sysData.totalQRs ?? 5;
 
-            // Fetch the specific QR code matching the currentIndex
-            const qrSnapshot = await transaction.get(db.collection('qr_codes').doc(currentIndex.toString()));
-            if (!qrSnapshot.exists || !qrSnapshot.data()?.isActive) {
-                // Failsafe: if QR is missing or inactive, we gracefully fail so admin can fix DB.
-                throw { statusCode: 500, message: `Active QR Code with ID ${currentIndex} not found.` };
+            const qrSnap = await transaction.get(db.collection('qr_codes').doc(String(currentIndex)));
+
+            if (!qrSnap.exists || !qrSnap.data()?.isActive) {
+                throw { statusCode: 500, message: `No active QR code found at index ${currentIndex} — contact admin` };
             }
 
-            assignedQr = { id: qrSnapshot.id, ...qrSnapshot.data() };
-            qrIndexToAssign = currentIndex;
+            assignedQr = { id: qrSnap.id, ...qrSnap.data() };
+            qrIndexAssigned = currentIndex;
 
-            // Increment Current Index (Round-Robin logic)
-            let nextIndex = currentIndex + 1;
-            if (nextIndex >= totalQRs) {
-                nextIndex = 0; // Reset
-            }
+            const nextIndex = (currentIndex + 1) >= totalQRs ? 0 : currentIndex + 1;
 
-            // Write operations
             transaction.update(systemRef, {
                 currentIndex: nextIndex,
-                lastUpdated: new Date()
+                lastUpdated: admin.firestore.Timestamp.now()
             });
-
-            transaction.update(db.collection('qr_codes').doc(qrSnapshot.id), {
-                usageCount: (assignedQr.usageCount || 0) + 1,
-                lastUsedAt: new Date()
+            transaction.update(db.collection('qr_codes').doc(qrSnap.id), {
+                usageCount: admin.firestore.FieldValue.increment(1),
+                lastUsedAt: admin.firestore.Timestamp.now()
             });
-
             transaction.update(db.collection('registrations').doc(registrationId), {
-                assignedQrIndex: qrIndexToAssign
+                qrIndex: qrIndexAssigned
             });
         });
 
-        // 3. Return securely to frontend
         return {
-            qrIndex: qrIndexToAssign,
+            qrIndex: qrIndexAssigned,
             qrImageUrl: assignedQr?.imageUrl,
-            amount: amount,
-            expiresInMinutes: 15
+            amount
         };
     },
 
+    // ============================================================
+    // STEP 8 — PAYMENT SUBMISSION (OLD TWO-STEP FLOW)
+    // POST /api/payments/submit
+    // Kept for backward compatibility. New flow uses completeWithPayment.
+    // ============================================================
     async submitPayment(userId: string, data: any) {
-        const { registrationId, transactionId, upiId, paymentDate, paymentTime } = data;
+        const { registrationId, transactionId, upiId, bankName, paymentDate, paymentTime } = data;
 
         if (!registrationId || !transactionId || !paymentDate) {
-            throw { statusCode: 400, message: 'Missing required payment submission fields' };
+            throw { statusCode: 400, message: 'Missing required fields: registrationId, transactionId, paymentDate' };
         }
 
-        // 1. Verify Registration Structure
         const regRef = db.collection('registrations').doc(registrationId);
         const regDoc = await regRef.get();
 
@@ -224,44 +227,93 @@ export const paymentService = {
 
         const regData = regDoc.data()!;
 
-        if (regData.paymentStatus === 'VERIFIED') {
-            throw { statusCode: 400, message: 'Payment is already verified' };
-        }
-
-        if (regData.paymentStatus === 'PENDING' && regData.paymentDetails?.transactionId === transactionId) {
-            throw { statusCode: 400, message: 'This exact transaction ID was already submitted' };
-        }
-
-        const qrCodeUsed = regData.assignedQrIndex?.toString() || 'Unknown';
-
-        // 2. Atomic Batch Update
-        const batch = db.batch();
-
-        batch.update(regRef, {
-            paymentStatus: 'PENDING',
-            paymentDetails: {
-                transactionId,
-                upiId: upiId || null,
-                paymentDate,
-                paymentTime: paymentTime || null,
-                qrCodeUsed,
-                submittedAt: new Date().toISOString()
+        if (regData.paymentStatus !== 'INITIATED') {
+            if (regData.paymentStatus === 'PENDING') {
+                throw { statusCode: 400, message: 'Payment already submitted — awaiting admin verification' };
             }
-        });
+            if (regData.paymentStatus === 'VERIFIED') {
+                throw { statusCode: 400, message: 'Payment already verified — no resubmission allowed' };
+            }
+            throw { statusCode: 400, message: `Cannot submit payment: current status is ${regData.paymentStatus}` };
+        }
+
+        const dupSnap = await db.collection('payments')
+            .where('transactionId', '==', transactionId)
+            .limit(1)
+            .get();
+
+        if (!dupSnap.empty) {
+            throw { statusCode: 400, message: 'Duplicate transaction ID — this payment has already been submitted' };
+        }
+
+        const qrIndex = regData.qrIndex ?? null;
+        const submittedAt = admin.firestore.Timestamp.now();
 
         const newPaymentRef = db.collection('payments').doc();
+        const batch = db.batch();
+
         batch.set(newPaymentRef, {
             registrationId,
             userId,
             transactionId,
-            qrCodeUsed,
             upiId: upiId || null,
+            bankName: bankName || null,
+            paymentDate,
+            paymentTime: paymentTime || null,
+            qrIndex,
             status: 'PENDING',
-            createdAt: new Date()
+            submittedAt
+        });
+
+        batch.update(regRef, {
+            paymentStatus: 'PENDING',
+            submittedAt
         });
 
         await batch.commit();
 
-        return { success: true, message: 'Payment successfully submitted for verification' };
+        return {
+            success: true,
+            message: 'Payment submitted successfully — awaiting admin verification'
+        };
+    },
+
+    // ============================================================
+    // QR PREVIEW (READ-ONLY) — New deferred-registration flow
+    // GET /api/payments/preview-qr?tournamentId=xxx
+    //
+    // Returns the current round-robin QR WITHOUT creating any
+    // registration or incrementing the counter. The counter only
+    // advances when the user submits payment via completeWithPayment.
+    // ============================================================
+    async previewQr(tournamentId: string) {
+        if (!tournamentId) {
+            throw { statusCode: 400, message: 'tournamentId is required' };
+        }
+
+        const tDoc = await db.collection('tournaments').doc(tournamentId).get();
+        if (!tDoc.exists) {
+            throw { statusCode: 404, message: 'Tournament not found' };
+        }
+        const tData = tDoc.data()!;
+        const amount: number = tData.entryFee ?? tData.paymentAmount ?? 0;
+
+        const sysDoc = await db.collection('system_settings').doc('qr_rotation').get();
+        if (!sysDoc.exists) {
+            throw { statusCode: 500, message: 'QR rotation system settings not found — contact admin' };
+        }
+        const sysData = sysDoc.data()!;
+        const currentIndex: number = sysData.currentIndex ?? 0;
+
+        const qrDoc = await db.collection('qr_codes').doc(String(currentIndex)).get();
+        if (!qrDoc.exists || !qrDoc.data()?.isActive) {
+            throw { statusCode: 500, message: `No active QR at index ${currentIndex} — contact admin` };
+        }
+
+        return {
+            qrIndex: currentIndex,
+            qrImageUrl: qrDoc.data()!.imageUrl,
+            amount
+        };
     }
 };

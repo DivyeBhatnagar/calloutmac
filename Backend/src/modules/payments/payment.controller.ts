@@ -49,3 +49,18 @@ export const submitPayment = async (req: Request, res: Response, next: NextFunct
         next(error);
     }
 };
+
+/**
+ * GET /api/payments/preview-qr?tournamentId=xxx
+ * Read-only: returns current QR image URL + amount WITHOUT creating any doc
+ * or advancing the rotation counter.
+ */
+export const previewQr = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const tournamentId = req.query.tournamentId as string;
+        const data = await paymentService.previewQr(tournamentId);
+        sendSuccess(res, 200, 'QR preview loaded', data);
+    } catch (error) {
+        next(error);
+    }
+};

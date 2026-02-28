@@ -27,35 +27,39 @@ export interface Game {
 
 export interface Registration {
     id: string;
-    tournament: string;
+    tournament?: string;
     tournamentId: string;
     college?: string;
-    game: string;
-    username: string;
-    email: string;
+    game?: string;
+    username?: string;
+    email?: string;
     userId: string;
-    phoneNumber: string;
+    phoneNumber?: string;
     teamName: string;
     iglName: string;
     iglContact: string;
     playerIds: string[];
     playerNames: string[];
-    playerCount: number;
-    registeredAt: any;
-    status: string;
+    playerCount?: number;
+    registeredAt?: any;    // legacy field (kept for compat)
+    createdAt?: any;       // new field written by completeWithPayment
+    submittedAt?: any;
+    status?: string;
     paymentStatus: 'PENDING' | 'VERIFIED' | 'FAILED';
     paymentVerified: boolean;
-    paymentDetails?: PaymentDetails;
-}
-
-export interface PaymentDetails {
-    bankName: string;
-    transactionId: string;
-    paymentDate: string;
-    paymentTime: string;
-    upiId: string;
-    amount: number;
-    qrCodeUsed?: string;
+    // Embedded payment proof (replaces separate payments collection)
+    payment?: {
+        transactionId: string;
+        upiId?: string;
+        bankName?: string;
+        paymentDate?: string;
+        paymentTime?: string;
+        amount?: number;
+        submittedAt?: any;
+    };
+    verifiedAt?: string;
+    verifiedBy?: string;
+    qrIndex?: number;
 }
 
 export interface Query {

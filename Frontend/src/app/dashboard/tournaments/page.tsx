@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRealtimeCollection } from '@/hooks/useRealtimeCollection';
-import { where, orderBy } from 'firebase/firestore';
+import { where } from 'firebase/firestore';
 import GlowCard from '@/components/GlowCard';
 import { RiTrophyLine, RiTeamLine, RiUserLine, RiCloseLine, RiCalendarLine } from 'react-icons/ri';
 import { Registration } from '@/types';
@@ -11,14 +11,26 @@ import { Registration } from '@/types';
 export default function MyTournaments() {
     const { user } = useAuth();
     const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
-    
-    const { data: tournaments, loading } = useRealtimeCollection<Registration>(
+
+    const { data: rawRegs, loading, error } = useRealtimeCollection<Registration>(
         'registrations',
-        user?.id ? [where('userId', '==', user.id), orderBy('registeredAt', 'desc')] : []
+        user?.id ? [where('userId', '==', user.id)] : []
     );
 
+    // Sort client-side so no composite Firestore index is needed
+    const tournaments = useMemo(
+        () => [...rawRegs].sort((a, b) => {
+            const ta = (a.createdAt ?? a.registeredAt)?.toMillis?.() ?? 0;
+            const tb = (b.createdAt ?? b.registeredAt)?.toMillis?.() ?? 0;
+            return tb - ta;
+        }),
+        [rawRegs]
+    );
+
+    // Debug: surface Firestore errors during development
+    if (error) console.error('[MyTournaments] Firestore error:', error);
     const groupedByStatus = useMemo(() => {
-        const verified = tournaments.filter(r => r.paymentVerified);
+        const verified = tournaments.filter(r => r.paymentVerified === true);
         const pending = tournaments.filter(r => !r.paymentVerified && r.paymentStatus === 'PENDING');
         const failed = tournaments.filter(r => r.paymentStatus === 'FAILED');
         return { verified, pending, failed };
@@ -90,11 +102,10 @@ export default function MyTournaments() {
                                         <h3 className="text-xl font-orbitron font-bold text-white tracking-wide">
                                             {reg.tournament || 'Tournament'}
                                         </h3>
-                                        <span className={`px-2 py-1 text-xs font-bold rounded uppercase ${
-                                            reg.status === 'ACTIVE' ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' :
+                                        <span className={`px-2 py-1 text-xs font-bold rounded uppercase ${reg.status === 'ACTIVE' ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' :
                                             reg.status === 'CLOSED' ? 'bg-red-500/10 text-red-500 border border-red-500/30' :
-                                            'bg-gray-500/10 text-gray-400 border border-gray-500/30'
-                                        }`}>
+                                                'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+                                            }`}>
                                             {reg.status || 'ACTIVE'}
                                         </span>
                                     </div>
@@ -119,11 +130,10 @@ export default function MyTournaments() {
 
                                 <div className="pt-4 border-t border-white/10 flex justify-between items-center">
                                     <span className="text-sm text-gray-400">Payment Status</span>
-                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                        reg.paymentVerified ? 'bg-neon-green/20 text-neon-green border border-neon-green/50' :
+                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${reg.paymentVerified ? 'bg-neon-green/20 text-neon-green border border-neon-green/50' :
                                         reg.paymentStatus === 'FAILED' ? 'bg-red-500/20 text-red-500 border border-red-500/50' :
-                                        'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
-                                    }`}>
+                                            'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
+                                        }`}>
                                         {reg.paymentVerified ? '🟢 VERIFIED' : reg.paymentStatus === 'FAILED' ? '🔴 FAILED' : '🟡 PENDING'}
                                     </span>
                                 </div>
@@ -141,12 +151,12 @@ export default function MyTournaments() {
                         onClick={(e) => e.stopPropagation()}>
                         <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-gray-900 z-10">
                             <h2 className="text-2xl font-orbitron font-bold text-white">Registration Details</h2>
-                            <button onClick={() => setSelectedReg(null)} 
+                            <button onClick={() => setSelectedReg(null)}
                                 className="text-gray-400 hover:text-white transition-colors">
                                 <RiCloseLine className="text-2xl" />
                             </button>
                         </div>
-                        
+
                         <div className="p-6 space-y-6">
                             {/* Tournament Info */}
                             <div>
@@ -190,20 +200,21 @@ export default function MyTournaments() {
                             <div>
                                 <h3 className="text-lg font-bold text-white mb-3">Payment Information</h3>
                                 <div className="space-y-2 text-sm">
-                                    <p className="text-gray-400">Status: 
-                                        <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
-                                            selectedReg.paymentVerified 
-                                                ? 'bg-neon-green/20 text-neon-green' 
-                                                : 'bg-yellow-500/20 text-yellow-500'
-                                        }`}>
-                                            {selectedReg.paymentVerified ? 'VERIFIED' : 'PENDING'}
+                                    <p className="text-gray-400">Status:
+                                        <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${selectedReg.paymentVerified
+                                            ? 'bg-neon-green/20 text-neon-green'
+                                            : 'bg-yellow-500/20 text-yellow-500'
+                                            }`}>
+                                            {selectedReg.paymentVerified ? '✅ VERIFIED' : '⏳ PENDING VERIFICATION'}
                                         </span>
                                     </p>
-                                    {selectedReg.paymentDetails && (
+                                    {selectedReg.payment && (
                                         <>
-                                            <p className="text-gray-400">Transaction ID: <span className="text-white">{selectedReg.paymentDetails.transactionId}</span></p>
-                                            <p className="text-gray-400">Amount: <span className="text-white">₹{selectedReg.paymentDetails.amount}</span></p>
-                                            <p className="text-gray-400">Date: <span className="text-white">{selectedReg.paymentDetails.paymentDate}</span></p>
+                                            <p className="text-gray-400">Transaction ID: <span className="text-white font-mono">{selectedReg.payment.transactionId}</span></p>
+                                            {selectedReg.payment.amount && <p className="text-gray-400">Amount: <span className="text-white">₹{selectedReg.payment.amount}</span></p>}
+                                            {selectedReg.payment.paymentDate && <p className="text-gray-400">Date: <span className="text-white">{selectedReg.payment.paymentDate}</span></p>}
+                                            {selectedReg.payment.upiId && <p className="text-gray-400">UPI ID: <span className="text-white">{selectedReg.payment.upiId}</span></p>}
+                                            {selectedReg.payment.bankName && <p className="text-gray-400">Bank: <span className="text-white">{selectedReg.payment.bankName}</span></p>}
                                         </>
                                     )}
                                 </div>

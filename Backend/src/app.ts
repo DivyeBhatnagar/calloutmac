@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import path from 'path';
 import { errorHandler } from './middlewares/error.middleware';
 
 // Routes imports
@@ -18,6 +19,11 @@ const app: Application = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve QR images from Backend/public/qr/ at route /qr
+// e.g. GET /qr/qr1.jpeg … GET /qr/qr5.jpeg
+const qrAssetsPath = path.join(__dirname, '..', 'public', 'qr');
+app.use('/qr', express.static(qrAssetsPath));
 
 // Base route
 app.get('/api', (req, res) => {

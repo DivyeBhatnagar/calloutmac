@@ -41,14 +41,49 @@ export const updateUserRole = async (req: Request, res: Response, next: NextFunc
     }
 };
 
+/**
+ * STEP 10 — Admin: Get All Registrations
+ * Returns full team + IGL + player + payment details
+ * GET /api/admin/registrations
+ */
+export const getAdminRegistrations = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const data = await adminService.getAllRegistrations();
+        sendSuccess(res, 200, 'All registrations retrieved', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * STEP 11 — Admin: Verify Payment
+ * PATCH /api/admin/registrations/:id/verify
+ */
 export const verifyRegistrationPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const registrationId = req.params.id as string;
-        // admin id extracted from the verified authenticated token
         const adminId = req.user.id;
-
         const data = await adminService.verifyRegistrationPayment(adminId, registrationId);
-        sendSuccess(res, 200, 'Registration payment formally verified', data);
+        sendSuccess(res, 200, 'Registration payment verified', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * CSV EXPORT — Admin: Export Registrations as CSV
+ * GET /api/admin/registrations/export-csv?tournamentId=xxx  (tournamentId optional)
+ */
+export const exportRegistrationsCSV = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const tournamentId = req.query.tournamentId as string | undefined;
+        const csv = await adminService.exportRegistrationsCSV(tournamentId);
+        const filename = tournamentId
+            ? `registrations_${tournamentId}_${Date.now()}.csv`
+            : `registrations_all_${Date.now()}.csv`;
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(csv);
     } catch (error) {
         next(error);
     }

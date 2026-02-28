@@ -11,7 +11,7 @@ import Link from 'next/link';
 export default function AdminStatsPage() {
     const { data: tournaments, loading: tournamentsLoading } = useRealtimeCollection<Tournament>('tournaments');
     const { data: registrations, loading: regsLoading } = useRealtimeCollection<Registration>('registrations', [
-        orderBy('registeredAt', 'desc')
+        orderBy('createdAt', 'desc')
     ]);
     const { data: users } = useRealtimeCollection<User>('users');
     const { data: queries } = useRealtimeCollection<Query>('queries');
@@ -21,19 +21,19 @@ export default function AdminStatsPage() {
         const totalRegistrations = registrations.length;
         const platformUsers = users.length;
         const supportQueries = queries.filter(q => q.status === 'pending').length;
-        
+
         const verifiedRegs = registrations.filter(r => r.paymentVerified);
         const revenueThisMonth = verifiedRegs.reduce((sum, reg) => {
-            const regDate = reg.registeredAt?.toDate?.() || new Date();
+            const regDate = (reg.createdAt ?? reg.registeredAt)?.toDate?.() || new Date();
             const now = new Date();
             if (regDate.getMonth() === now.getMonth() && regDate.getFullYear() === now.getFullYear()) {
-                return sum + (reg.paymentDetails?.amount || 0);
+                return sum + (reg.payment?.amount || 0);
             }
             return sum;
         }, 0);
 
         const pendingVerifications = registrations.filter(r => !r.paymentVerified && r.paymentStatus === 'PENDING').length;
-        
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const activeUsersToday = users.filter(u => {
@@ -116,7 +116,7 @@ export default function AdminStatsPage() {
                         <p className="text-gray-400 text-sm uppercase tracking-wider">Tournament Completion Rate</p>
                         <div className="flex items-end gap-2">
                             <h3 className="text-2xl font-bold text-white">
-                                {tournaments.length > 0 
+                                {tournaments.length > 0
                                     ? Math.round((tournaments.filter(t => t.status === 'closed').length / tournaments.length) * 100)
                                     : 0}%
                             </h3>
@@ -179,11 +179,10 @@ export default function AdminStatsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                            reg.paymentVerified 
-                                                ? 'bg-neon-green/20 text-neon-green' 
+                                        <span className={`px-3 py-1 text-xs font-bold rounded-full ${reg.paymentVerified
+                                                ? 'bg-neon-green/20 text-neon-green'
                                                 : 'bg-yellow-500/20 text-yellow-500'
-                                        }`}>
+                                            }`}>
                                             {reg.paymentVerified ? 'VERIFIED' : 'PENDING'}
                                         </span>
                                     </div>
