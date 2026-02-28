@@ -7,6 +7,7 @@ import { Tournament } from "@/types";
 import Link from "next/link";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { RiTrophyLine, RiGamepadLine, RiTeamLine, RiHotelLine } from "react-icons/ri";
 import Image from "next/image";
 
@@ -18,6 +19,7 @@ const GAMES = [
 ];
 
 export default function PublicGamesPage() {
+    const { user } = useAuth();
     const { data: allTournaments, loading } = useRealtimeCollection<Tournament>("tournaments", [
         where("status", "==", "ACTIVE")
     ]);
@@ -27,8 +29,8 @@ export default function PublicGamesPage() {
     useEffect(() => {
         if (allTournaments) {
             const sorted = [...allTournaments].sort((a, b) => {
-                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                const dateA = a.createdAt ? (typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
+                const dateB = b.createdAt ? (typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
                 return dateB - dateA;
             });
             setTournaments(sorted);
@@ -180,9 +182,9 @@ export default function PublicGamesPage() {
                                                     </div>
                                                 </div>
 
-                                                <Link href="/login" className="mt-auto relative z-10 block">
+                                                <Link href={user ? "/dashboard/register" : "/login"} className="mt-auto relative z-10 block">
                                                     <button className="w-full bg-white/5 border border-neon-green/30 text-neon-green font-orbitron font-bold py-3 px-4 rounded-lg hover:bg-neon-green hover:text-black transition-all duration-300 uppercase tracking-widest text-sm hover:shadow-[0_0_15px_rgba(0,255,102,0.4)]">
-                                                        Login to Register
+                                                        {user ? "Join Tournament" : "Login to Register"}
                                                     </button>
                                                 </Link>
                                             </motion.div>

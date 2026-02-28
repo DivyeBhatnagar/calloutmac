@@ -119,6 +119,7 @@ export const updateTournament = async (req: Request, res: Response, next: NextFu
 
 export const uploadTournamentPoster = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log(`[AdminController] 📥 uploadTournamentPoster: id=${req.params.id}, hasFile=${!!req.file}`);
         if (!req.file) throw { statusCode: 400, message: 'No file uploaded' };
         const id = req.params.id as string;
         const data = await adminService.uploadTournamentPoster(id, req.file);
@@ -130,6 +131,7 @@ export const uploadTournamentPoster = async (req: Request, res: Response, next: 
 
 export const uploadGameLogo = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log(`[AdminController] 📥 uploadGameLogo: id=${req.params.id}, gameId=${req.params.gameId}, hasFile=${!!req.file}`);
         if (!req.file) throw { statusCode: 400, message: 'No file uploaded' };
         const id = req.params.id as string;
         const gameId = req.params.gameId as string;

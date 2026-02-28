@@ -3,8 +3,9 @@
 import { motion } from "framer-motion";
 import { NeonButton } from "./ui/NeonButton";
 import Link from "next/link";
-
+import { useAuth } from "@/lib/auth-context";
 export function FinalCTA() {
+    const { user } = useAuth();
     return (
         <section className="relative py-32 bg-black border-t border-neon-green/30 overflow-hidden flex items-center justify-center text-center">
             {/* Background glow radial */}
@@ -28,7 +29,7 @@ export function FinalCTA() {
                         Join thousands of players competing daily. Build your legacy, win rewards, and become a champion.
                     </p>
 
-                    <Link href="/register">
+                    <Link href={user ? "/dashboard" : "/login"}>
                         <NeonButton variant="solid" className="text-lg px-12 py-5 scale-110 shadow-[0_0_40px_rgba(0,255,102,0.8)]">
                             ENTER ARENA
                         </NeonButton>

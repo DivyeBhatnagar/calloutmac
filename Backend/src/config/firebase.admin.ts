@@ -14,7 +14,8 @@ if (!admin.apps.length) {
         if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
             const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('ascii'));
             admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
+                credential: admin.credential.cert(serviceAccount),
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
             });
         } else {
             // Trying to initialize without cert expects GOOGLE_APPLICATION_CREDENTIALS to be set.
@@ -22,7 +23,7 @@ if (!admin.apps.length) {
             // But verifyIdToken can work without a private key if we at least provide the projectId!
             admin.initializeApp({
                 projectId: process.env.FIREBASE_PROJECT_ID || 'call-out-esports',
-                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.firebasestorage.app`
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.appspot.com`
             });
         }
     } catch (error) {
@@ -30,7 +31,7 @@ if (!admin.apps.length) {
         // Best effort init
         try {
             admin.initializeApp({
-                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.firebasestorage.app`
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID || 'call-out-esports'}.appspot.com`
             });
         } catch (e) { } // Ignore duplicate init or failure
     }

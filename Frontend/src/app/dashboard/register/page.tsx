@@ -11,6 +11,7 @@ import {
     RiSmartphoneLine, RiBankLine, RiHotelLine, RiGroupLine
 } from 'react-icons/ri';
 import Image from 'next/image';
+import { resolveImageUrl } from '@/lib/utils';
 
 // ─── STEP DEFINITIONS ──────────────────────────────────────────────────────────
 const STEPS = [
@@ -361,7 +362,7 @@ export default function RegisterTournamentPage() {
                                                             : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/30 hover:bg-white/10 hover:text-white'}`}
                                                 >
                                                     <div className="w-10 h-10 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                        {g.logoUrl ? <img src={g.logoUrl} alt={g.name} className="w-full h-full object-contain" /> : <RiGamepadLine />}
+                                                        {g.logoUrl ? <img src={resolveImageUrl(g.logoUrl)} alt={g.name} className="w-full h-full object-contain" /> : <RiGamepadLine />}
                                                     </div>
                                                     <span className="font-orbitron font-bold tracking-wider text-sm truncate">{g.name}</span>
                                                 </button>
@@ -385,7 +386,7 @@ export default function RegisterTournamentPage() {
                                                             : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/30 hover:bg-white/10 hover:text-white'}`}
                                                 >
                                                     <div className="w-10 h-10 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                        {c.logoUrl ? <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" /> : <RiHotelLine />}
+                                                        {c.logoUrl ? <img src={resolveImageUrl(c.logoUrl)} alt={c.name} className="w-full h-full object-contain" /> : <RiHotelLine />}
                                                     </div>
                                                     <span className="font-semibold flex-1 truncate text-sm">{c.name}</span>
                                                     {squad.college === c.name && <RiCheckLine className="text-neon-green" />}

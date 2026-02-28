@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { NeonButton } from "./ui/NeonButton";
+import Link from "next/link";
 
 interface GameProps {
     name: string;
@@ -29,9 +30,11 @@ export function FeaturedGames() {
                             Compete in the most popular esports titles. New tournaments added daily.
                         </p>
                     </div>
-                    <NeonButton variant="outline" className="hidden md:flex">
-                        View All Games
-                    </NeonButton>
+                    <Link href="/games">
+                        <NeonButton variant="outline" className="hidden md:flex">
+                            View All Games
+                        </NeonButton>
+                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -56,9 +59,11 @@ export function FeaturedGames() {
                                 </h3>
 
                                 <div className="translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                                    <NeonButton variant="solid" className="w-full text-xs py-2 h-auto">
-                                        Compete Now
-                                    </NeonButton>
+                                    <Link href="/tournaments">
+                                        <NeonButton variant="solid" className="w-full text-xs py-2 h-auto">
+                                            Compete Now
+                                        </NeonButton>
+                                    </Link>
                                 </div>
                             </div>
 
@@ -69,7 +74,9 @@ export function FeaturedGames() {
                 </div>
 
                 <div className="mt-8 flex justify-center md:hidden">
-                    <NeonButton variant="outline">View All Games</NeonButton>
+                    <Link href="/games">
+                        <NeonButton variant="outline">View All Games</NeonButton>
+                    </Link>
                 </div>
             </div>
         </section>

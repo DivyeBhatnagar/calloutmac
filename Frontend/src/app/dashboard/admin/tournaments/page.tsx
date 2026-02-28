@@ -13,6 +13,7 @@ import {
 } from 'react-icons/ri';
 import { Tournament, Game, College } from '@/types';
 import Image from 'next/image';
+import { resolveImageUrl } from '@/lib/utils';
 
 interface TournamentForm {
     name: string;
@@ -23,10 +24,8 @@ interface TournamentForm {
     collegesRestricted: boolean;
     allowedColleges: College[];
     supportedGames: Game[];
-    registrationDeadline: string;
-    startDate: string;
-    endDate: string;
     posterUrl: string;
+    registrationDeadline: string;
 }
 
 export default function AdminTournamentsPage() {
@@ -44,10 +43,8 @@ export default function AdminTournamentsPage() {
         collegesRestricted: false,
         allowedColleges: [],
         supportedGames: [],
-        registrationDeadline: '',
-        startDate: '',
-        endDate: '',
-        posterUrl: ''
+        posterUrl: '',
+        registrationDeadline: ''
     });
 
     const [tempCollegeName, setTempCollegeName] = useState('');
@@ -78,13 +75,25 @@ export default function AdminTournamentsPage() {
             collegesRestricted: false,
             allowedColleges: [],
             supportedGames: [],
-            registrationDeadline: '',
-            startDate: '',
-            endDate: '',
-            posterUrl: ''
+            posterUrl: '',
+            registrationDeadline: ''
         });
         setError('');
         setShowModal(true);
+    };
+
+
+    const formatDateForInput = (date: any) => {
+        if (!date) return '';
+        let d: Date;
+        if (typeof date === 'string') d = new Date(date);
+        else if (typeof date.toDate === 'function') d = date.toDate();
+        else if (date.seconds) d = new Date(date.seconds * 1000);
+        else return '';
+
+        // Format for datetime-local: YYYY-MM-DDTHH:mm
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
     const openEditModal = (t: Tournament) => {
@@ -98,10 +107,8 @@ export default function AdminTournamentsPage() {
             collegesRestricted: !!t.collegesRestricted,
             allowedColleges: t.allowedColleges || [],
             supportedGames: t.supportedGames || [],
-            registrationDeadline: t.registrationDeadline ? t.registrationDeadline.split('T')[0] : '',
-            startDate: t.startDate ? t.startDate.split('T')[0] : '',
-            endDate: t.endDate ? t.endDate.split('T')[0] : '',
-            posterUrl: t.posterUrl || ''
+            posterUrl: t.posterUrl || '',
+            registrationDeadline: formatDateForInput(t.registrationDeadline)
         });
         setError('');
         setShowModal(true);
@@ -152,12 +159,16 @@ export default function AdminTournamentsPage() {
                 let url = '';
                 if (type === 'poster') {
                     formData.append('poster', file);
-                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/poster`, formData);
+                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/poster`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
                     url = res.data.data.url;
                     setForm(f => ({ ...f, posterUrl: url }));
                 } else if (type === 'game' && targetId) {
                     formData.append('logo', file);
-                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/games/${targetId}/logo`, formData);
+                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/games/${targetId}/logo`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
                     url = res.data.data.url;
                     setForm(f => ({
                         ...f,
@@ -165,7 +176,9 @@ export default function AdminTournamentsPage() {
                     }));
                 } else if (type === 'college' && targetId) {
                     formData.append('logo', file);
-                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/colleges/${targetId}/logo`, formData);
+                    const res = await api.post(`/admin/tournaments/${editingTournament.id}/colleges/${targetId}/logo`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
                     url = res.data.data.url;
                     setForm(f => ({
                         ...f,
@@ -187,12 +200,6 @@ export default function AdminTournamentsPage() {
         if (!form.posterUrl) return 'Activation requires a poster banner.';
         if (form.supportedGames.length === 0) return 'At least one supported game is required.';
         if (!form.registrationDeadline) return 'Registration deadline is required for activation.';
-        if (!form.startDate) return 'Start date is required for activation.';
-
-        const deadline = new Date(form.registrationDeadline).getTime();
-        const start = new Date(form.startDate).getTime();
-        if (start <= deadline) return 'Start date must be after registration deadline.';
-
         return null;
     };
 
@@ -327,23 +334,20 @@ export default function AdminTournamentsPage() {
                                     <Field label="Tournament Name *">
                                         <input className={inputCls} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Holi Arena 2026" />
                                     </Field>
-                                    <div className="md:col-span-2">
-                                        <Field label="Description *">
-                                            <textarea className={inputCls + ' min-h-[100px] py-3'} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Write about the event, rules, rewards..." />
-                                        </Field>
-                                    </div>
                                     <Field label="Registration Deadline *">
                                         <div className="relative">
                                             <RiCalendarLine className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            <input type="date" className={inputCls + ' pl-10 [color-scheme:dark]'} value={form.registrationDeadline} onChange={e => setForm({ ...form, registrationDeadline: e.target.value })} />
+                                            <input
+                                                type="datetime-local"
+                                                className={inputCls + ' pl-10 [color-scheme:dark]'}
+                                                value={form.registrationDeadline}
+                                                onChange={e => setForm({ ...form, registrationDeadline: e.target.value })}
+                                            />
                                         </div>
                                     </Field>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Field label="Start Date *">
-                                            <input type="date" className={inputCls + ' [color-scheme:dark]'} value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} />
-                                        </Field>
-                                        <Field label="End Date *">
-                                            <input type="date" className={inputCls + ' [color-scheme:dark]'} value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
+                                    <div className="md:col-span-2">
+                                        <Field label="Description *">
+                                            <textarea className={inputCls + ' min-h-[100px] py-3'} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Write about the event, rules, rewards..." />
                                         </Field>
                                     </div>
                                 </div>
@@ -357,7 +361,7 @@ export default function AdminTournamentsPage() {
                                         <div className={`w-full sm:w-64 aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center relative overflow-hidden transition-all
                                             ${form.posterUrl ? 'border-neon-green/30 bg-neon-green/5' : 'border-white/10 bg-white/3'}`}>
                                             {form.posterUrl ? (
-                                                <img src={form.posterUrl} alt="Poster" className="w-full h-full object-cover" />
+                                                <img src={resolveImageUrl(form.posterUrl)} alt="Poster" className="w-full h-full object-cover" />
                                             ) : (
                                                 <RiImageLine className="text-4xl text-gray-700 mb-2" />
                                             )}
@@ -393,7 +397,7 @@ export default function AdminTournamentsPage() {
                                         {form.supportedGames.map(game => (
                                             <div key={game.id} className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-center gap-4 group">
                                                 <div className="w-12 h-12 rounded-lg bg-black border border-white/10 flex items-center justify-center relative overflow-hidden flex-shrink-0">
-                                                    {game.logoUrl ? <img src={game.logoUrl} className="w-full h-full object-contain" /> : <RiGamepadLine className="text-gray-700 text-xl" />}
+                                                    {game.logoUrl ? <img src={resolveImageUrl(game.logoUrl)} className="w-full h-full object-contain" /> : <RiGamepadLine className="text-gray-700 text-xl" />}
                                                     {uploadingImage === game.id && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><RiLoader4Line className="text-neon-green animate-spin" /></div>}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -441,7 +445,7 @@ export default function AdminTournamentsPage() {
                                                 {form.allowedColleges.map(col => (
                                                     <div key={col.id} className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-center gap-4">
                                                         <div className="w-12 h-12 rounded-lg bg-black border border-white/10 flex items-center justify-center relative overflow-hidden flex-shrink-0">
-                                                            {col.logoUrl ? <img src={col.logoUrl} className="w-full h-full object-contain" /> : <RiHotelLine className="text-gray-700 text-xl" />}
+                                                            {col.logoUrl ? <img src={resolveImageUrl(col.logoUrl)} className="w-full h-full object-contain" /> : <RiHotelLine className="text-gray-700 text-xl" />}
                                                             {uploadingImage === col.id && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><RiLoader4Line className="text-neon-green animate-spin" /></div>}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
@@ -527,7 +531,7 @@ function TournamentCard({ tournament, onEdit, onDelete, delay }: { tournament: T
             <div className="space-y-5 h-full flex flex-col">
                 <div className="aspect-video w-full rounded-xl bg-white/5 border border-white/5 overflow-hidden relative">
                     {tournament.posterUrl ? (
-                        <img src={tournament.posterUrl} alt={tournament.name} className="w-full h-full object-cover" />
+                        <img src={resolveImageUrl(tournament.posterUrl)} alt={tournament.name} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-600">No Poster</div>
                     )}

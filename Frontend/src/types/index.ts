@@ -15,13 +15,10 @@ export interface Tournament {
     supportedGames: Game[];
     allowedColleges: College[];
     collegesRestricted: boolean;
+    registrationDeadline?: any;
 
-    registrationDeadline?: string;
-    startDate?: string;
-    endDate?: string;
-
-    createdAt: string;
-    updatedAt: string;
+    createdAt: any;
+    updatedAt: any;
 }
 
 export interface College {

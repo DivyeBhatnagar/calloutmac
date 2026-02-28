@@ -10,7 +10,7 @@ async function checkTournaments() {
 
     snapshot.forEach(doc => {
         const data = doc.data();
-        console.log(`ID: ${doc.id} | Name: ${data.name} | Status: "${data.status}"`);
+        console.log(`ID: ${doc.id} | Data: ${JSON.stringify(data, null, 2)}`);
     });
     console.log('-------------------------------');
     process.exit(0);

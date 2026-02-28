@@ -19,8 +19,8 @@ export function TournamentPreview() {
         if (allTournaments) {
             // Sort by createdAt desc locally (to avoid complex index requirements) and take top 3
             const sorted = [...allTournaments].sort((a, b) => {
-                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                const dateA = a.createdAt ? (typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
+                const dateB = b.createdAt ? (typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
                 return dateB - dateA;
             });
             setTournaments(sorted.slice(0, 3));

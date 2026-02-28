@@ -251,15 +251,7 @@ export const adminService = {
         if (!data.supportedGames || data.supportedGames.length === 0) {
             throw { statusCode: 400, message: 'Activation requires at least one supported game' };
         }
-        if (!data.registrationDeadline) throw { statusCode: 400, message: 'Registration deadline is required' };
-        if (!data.startDate) throw { statusCode: 400, message: 'Start date is required' };
-
-        const deadline = new Date(data.registrationDeadline).getTime();
-        const start = new Date(data.startDate).getTime();
-
-        if (start <= deadline) {
-            throw { statusCode: 400, message: 'Tournament start date must be after the registration deadline' };
-        }
+        if (!data.registrationDeadline) throw { statusCode: 400, message: 'Registration deadline is required for activation' };
     },
 
     /**
@@ -274,12 +266,6 @@ export const adminService = {
 
         if (data.collegesRestricted && (!data.allowedColleges || data.allowedColleges.length === 0)) {
             throw { statusCode: 400, message: 'Restriction is ON but no colleges were added' };
-        }
-
-        if (data.startDate && data.endDate) {
-            if (new Date(data.endDate).getTime() <= new Date(data.startDate).getTime()) {
-                throw { statusCode: 400, message: 'End date must be after start date' };
-            }
         }
     },
 
@@ -305,8 +291,6 @@ export const adminService = {
             currentRegistrations: 0,
             status: data.status || 'DRAFT',
             registrationDeadline: data.registrationDeadline ? admin.firestore.Timestamp.fromDate(new Date(data.registrationDeadline)) : null,
-            startDate: data.startDate ? admin.firestore.Timestamp.fromDate(new Date(data.startDate)) : null,
-            endDate: data.endDate ? admin.firestore.Timestamp.fromDate(new Date(data.endDate)) : null,
             createdBy: adminId,
             createdAt: admin.firestore.Timestamp.now(),
             updatedAt: admin.firestore.Timestamp.now()
@@ -337,9 +321,13 @@ export const adminService = {
         };
 
         // Convert dates to Timestamps if provided
-        if (data.registrationDeadline) updateData.registrationDeadline = admin.firestore.Timestamp.fromDate(new Date(data.registrationDeadline));
-        if (data.startDate) updateData.startDate = admin.firestore.Timestamp.fromDate(new Date(data.startDate));
-        if (data.endDate) updateData.endDate = admin.firestore.Timestamp.fromDate(new Date(data.endDate));
+        if (data.registrationDeadline) {
+            updateData.registrationDeadline = admin.firestore.Timestamp.fromDate(new Date(data.registrationDeadline));
+        }
+
+        // Remove legacy date fields explicitly if they were passed (cleanup)
+        delete updateData.startDate;
+        delete updateData.endDate;
 
         await tRef.update(updateData);
         const updatedDoc = await tRef.get();
@@ -352,6 +340,7 @@ export const adminService = {
         if (!tDoc.exists) throw { statusCode: 404, message: 'Tournament not found' };
 
         const { StorageService } = require('../shared/storage.service');
+        console.log(`[AdminService] 🧩 Calling StorageService.uploadFile for poster`);
         const url = await StorageService.uploadFile(file.buffer, 'posters', file.mimetype);
 
         await tRef.update({
@@ -374,6 +363,7 @@ export const adminService = {
         if (gameIndex === -1) throw { statusCode: 404, message: 'Game not found in this tournament' };
 
         const { StorageService } = require('../shared/storage.service');
+        console.log(`[AdminService] 🧩 Calling StorageService.uploadFile for gameId: ${gameId}`);
         const url = await StorageService.uploadFile(file.buffer, 'games', file.mimetype);
 
         games[gameIndex].logoUrl = url;

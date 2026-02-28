@@ -21,9 +21,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve QR images from Backend/public/qr/ at route /qr
-// e.g. GET /qr/qr1.jpeg … GET /qr/qr5.jpeg
 const qrAssetsPath = path.join(__dirname, '..', 'public', 'qr');
 app.use('/qr', express.static(qrAssetsPath));
+
+// Serve uploaded images from Backend/public/uploads/ at route /uploads (local fallback)
+const uploadAssetsPath = path.join(__dirname, '..', 'public', 'uploads');
+app.use('/uploads', express.static(uploadAssetsPath));
 
 // Base route
 app.get('/api', (req, res) => {
