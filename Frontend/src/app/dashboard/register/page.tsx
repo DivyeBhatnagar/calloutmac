@@ -88,10 +88,11 @@ export default function RegisterTournamentPage() {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
 
-    /* ---------- STEP 1 — TOURNAMENT ---------- */
+    /* ---------- STEP 1 — TOURNAMENT SELECTION ---------- */
     const [tournaments, setTournaments] = useState<any[]>([]);
     const [selectedTournament, setSelectedTournament] = useState<any>(null);
     const [tLoading, setTLoading] = useState(true);
+    const [subStep, setSubStep] = useState<'tournament' | 'game' | 'college'>('tournament');
 
     useEffect(() => {
         api.get('/tournaments')
@@ -135,11 +136,51 @@ export default function RegisterTournamentPage() {
     // ── nav helpers ──────────────────────────────────────────────────────────
     const go = (n: number) => { setDir(n > step ? 1 : -1); setError(''); setStep(n); };
 
-    // ── STEP 1 → 2 : validate tournament selection ───────────────────────────
+    // ── STEP 1 SUB-NAV : handles Tournament -> Game -> College ──
     const handleTournamentNext = () => {
         if (!selectedTournament) { setError('Please select a tournament to continue.'); return; }
         if (selectedTournament.isFull) { setError('This tournament is full. Please choose another.'); return; }
+
+        // Determine if we need Game selection
+        if (subStep === 'tournament') {
+            if (selectedTournament.supportedGames?.length > 1) {
+                setSubStep('game');
+                return;
+            }
+            // Auto-pick the only game if applicable
+            if (selectedTournament.supportedGames?.length === 1) {
+                setSquad(s => ({ ...s, game: selectedTournament.supportedGames[0] }));
+            }
+        }
+
+        // Determine if we need College selection
+        if (subStep === 'tournament' || subStep === 'game') {
+            // Validate game selected if we were on 'game' subStep
+            if (subStep === 'game' && !squad.game) {
+                setError('Please select a game to continue.'); return;
+            }
+
+            if (selectedTournament.allowedColleges?.length > 0) {
+                setSubStep('college');
+                return;
+            }
+        }
+
+        // Final validation for college if we were on 'college' subStep
+        if (subStep === 'college' && !squad.college) {
+            setError('Please select a college to continue.'); return;
+        }
+
         go(2);
+    };
+
+    const handleBackStep1 = () => {
+        if (subStep === 'college') {
+            if (selectedTournament.supportedGames?.length > 1) setSubStep('game');
+            else setSubStep('tournament');
+        } else if (subStep === 'game') {
+            setSubStep('tournament');
+        }
     };
 
     // ── STEP 2 → 3 : preview QR only (NO Firestore write, NO registration created) ──
@@ -243,83 +284,115 @@ export default function RegisterTournamentPage() {
                         className="bg-[#0d0d0d] border border-white/8 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl"
                     >
 
-                        {/* ═══════════ STEP 1 — TOURNAMENT ═══════════ */}
+                        {/* ═══════════ STEP 1 — SELECTION WIZARD ═══════════ */}
                         {step === 1 && (
                             <>
-                                <SectionTitle icon={RiGamepadLine} title="Choose Tournament" />
-                                {error && <ErrorBox msg={error} />}
+                                {subStep === 'tournament' && (
+                                    <>
+                                        <SectionTitle icon={RiGamepadLine} title="Choose Tournament" />
+                                        {error && <ErrorBox msg={error} />}
 
-                                {tLoading ? (
-                                    <div className="flex items-center justify-center py-12 text-gray-500 gap-3">
-                                        <RiLoader4Line className="animate-spin text-2xl" />
-                                        <span>Loading active tournaments…</span>
-                                    </div>
-                                ) : tournaments.length === 0 ? (
-                                    <div className="text-center py-12 text-gray-500">
-                                        No active tournaments right now. Check back soon.
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {tournaments.map(t => (
-                                            <button
-                                                key={t.id}
-                                                onClick={() => { setSelectedTournament(t); setError(''); }}
-                                                className={`w-full text-left rounded-xl border p-4 transition-all duration-200
-                                                    ${selectedTournament?.id === t.id
-                                                        ? 'border-neon-green/60 bg-neon-green/5 shadow-[0_0_20px_rgba(0,255,102,0.08)]'
-                                                        : 'border-white/8 bg-white/3 hover:border-white/20 hover:bg-white/5'}`}
-                                            >
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-orbitron font-bold text-white text-sm tracking-wide truncate">{t.name}</p>
-                                                        {t.description && <p className="text-gray-500 text-xs mt-1 line-clamp-1">{t.description}</p>}
-                                                    </div>
-                                                    <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 transition-all
-                                                        ${selectedTournament?.id === t.id ? 'border-neon-green bg-neon-green' : 'border-white/20'}`}>
-                                                        {selectedTournament?.id === t.id && (
-                                                            <RiCheckLine className="text-black text-xs w-full h-full" />
+                                        {tLoading ? (
+                                            <div className="flex items-center justify-center py-12 text-gray-500 gap-3">
+                                                <RiLoader4Line className="animate-spin text-2xl" />
+                                                <span>Loading active tournaments…</span>
+                                            </div>
+                                        ) : tournaments.length === 0 ? (
+                                            <div className="text-center py-12 text-gray-500">
+                                                No active tournaments right now. Check back soon.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {tournaments.map(t => (
+                                                    <button
+                                                        key={t.id}
+                                                        onClick={() => { setSelectedTournament(t); setError(''); }}
+                                                        className={`w-full text-left rounded-xl border p-4 transition-all duration-200
+                                                            ${selectedTournament?.id === t.id
+                                                                ? 'border-neon-green/60 bg-neon-green/5 shadow-[0_0_20px_rgba(0,255,102,0.08)]'
+                                                                : 'border-white/8 bg-white/3 hover:border-white/20 hover:bg-white/5'}`}
+                                                    >
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-orbitron font-bold text-white text-sm tracking-wide truncate">{t.name}</p>
+                                                                {t.description && <p className="text-gray-500 text-xs mt-1 line-clamp-1">{t.description}</p>}
+                                                            </div>
+                                                            <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 transition-all
+                                                                ${selectedTournament?.id === t.id ? 'border-neon-green bg-neon-green' : 'border-white/20'}`}>
+                                                                {selectedTournament?.id === t.id && (
+                                                                    <RiCheckLine className="text-black text-xs w-full h-full" />
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-3 gap-2 mt-3">
+                                                            <InfoChip icon={RiMoneyDollarCircleLine} color="text-neon-green"
+                                                                label={t.paymentAmount === 0 ? 'Free' : `₹${t.paymentAmount ?? t.entryFee}`} />
+                                                            <InfoChip icon={RiGroupLine} color="text-blue-400"
+                                                                label={t.availableSlots != null ? `${t.availableSlots} slots left` : 'Unlimited'} />
+                                                            <InfoChip icon={RiGamepadLine} color="text-purple-400"
+                                                                label={t.supportedGames?.length > 0 ? t.supportedGames.join(', ') : 'Any game'} />
+                                                        </div>
+
+                                                        {t.isFull && (
+                                                            <div className="mt-2 text-xs text-red-400 font-bold uppercase tracking-wider">
+                                                                ✗ Tournament Full
+                                                            </div>
                                                         )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-3 gap-2 mt-3">
-                                                    <InfoChip icon={RiMoneyDollarCircleLine} color="text-neon-green"
-                                                        label={t.paymentAmount === 0 ? 'Free' : `₹${t.paymentAmount ?? t.entryFee}`} />
-                                                    <InfoChip icon={RiGroupLine} color="text-blue-400"
-                                                        label={t.availableSlots != null ? `${t.availableSlots} slots left` : 'Unlimited'} />
-                                                    <InfoChip icon={RiGamepadLine} color="text-purple-400"
-                                                        label={t.supportedGames?.length > 0 ? t.supportedGames.join(', ') : 'Any game'} />
-                                                </div>
-
-                                                {t.isFull && (
-                                                    <div className="mt-2 text-xs text-red-400 font-bold uppercase tracking-wider">
-                                                        ✗ Tournament Full
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* College/Game info if tournament selected */}
-                                {selectedTournament && (
-                                    <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2 text-sm">
-                                        {selectedTournament.allowedColleges?.length > 0 && (
-                                            <div className="flex gap-2 text-yellow-400/80">
-                                                <RiHotelLine className="flex-shrink-0 mt-0.5" />
-                                                <span><span className="font-bold">Restricted colleges:</span> {selectedTournament.allowedColleges.join(', ')}</span>
+                                                    </button>
+                                                ))}
                                             </div>
                                         )}
-                                        {selectedTournament.supportedGames?.length > 1 && (
-                                            <div className="flex gap-2 text-purple-400/80">
-                                                <RiGamepadLine className="flex-shrink-0 mt-0.5" />
-                                                <span><span className="font-bold">Game selection required:</span> {selectedTournament.supportedGames.join(', ')}</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                    </>
                                 )}
 
-                                <div className="flex justify-end pt-2">
+                                {subStep === 'game' && selectedTournament && (
+                                    <>
+                                        <SectionTitle icon={RiGamepadLine} title="Select Game" subtitle={selectedTournament.name} />
+                                        {error && <ErrorBox msg={error} />}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {selectedTournament.supportedGames.map((g: string) => (
+                                                <button
+                                                    key={g}
+                                                    onClick={() => { setSquad(s => ({ ...s, game: g })); setError(''); }}
+                                                    className={`p-4 rounded-xl border text-center transition-all duration-200 font-orbitron font-bold tracking-wider
+                                                        ${squad.game === g
+                                                            ? 'border-neon-green bg-neon-green/10 text-neon-green shadow-[0_0_15px_rgba(0,255,102,0.1)]'
+                                                            : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/30 hover:bg-white/10 hover:text-white'}`}
+                                                >
+                                                    {g}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                {subStep === 'college' && selectedTournament && (
+                                    <>
+                                        <SectionTitle icon={RiHotelLine} title="Select College" subtitle={selectedTournament.name} />
+                                        {error && <ErrorBox msg={error} />}
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {selectedTournament.allowedColleges.map((c: string) => (
+                                                <button
+                                                    key={c}
+                                                    onClick={() => { setSquad(s => ({ ...s, college: c })); setError(''); }}
+                                                    className={`p-3.5 rounded-xl border text-left transition-all duration-200 flex items-center justify-between
+                                                        ${squad.college === c
+                                                            ? 'border-neon-green bg-neon-green/10 text-neon-green'
+                                                            : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/30 hover:bg-white/10 hover:text-white'}`}
+                                                >
+                                                    <span className="font-semibold">{c}</span>
+                                                    {squad.college === c && <RiCheckLine className="text-neon-green" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="flex items-center justify-between pt-2">
+                                    {subStep !== 'tournament' ? (
+                                        <NavButton icon={RiArrowLeftLine} label="Back" secondary onClick={handleBackStep1} iconLeft />
+                                    ) : <div />}
                                     <NavButton
                                         icon={RiArrowRightLine}
                                         label="Continue"
@@ -402,33 +475,6 @@ export default function RegisterTournamentPage() {
                                     </div>
                                 </div>
 
-                                {/* College & Game fields — only shown when tournament requires them */}
-                                {(selectedTournament?.allowedColleges?.length > 0 || selectedTournament?.supportedGames?.length > 1) && (
-                                    <div className="border-t border-white/8 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {selectedTournament?.allowedColleges?.length > 0 && (
-                                            <Field label="College *">
-                                                <select className={inputCls + ' cursor-pointer'} value={squad.college}
-                                                    onChange={e => setSquad(s => ({ ...s, college: e.target.value }))}>
-                                                    <option value="" className="bg-gray-900">-- Select College --</option>
-                                                    {selectedTournament.allowedColleges.map((c: string) => (
-                                                        <option key={c} value={c} className="bg-gray-900">{c}</option>
-                                                    ))}
-                                                </select>
-                                            </Field>
-                                        )}
-                                        {selectedTournament?.supportedGames?.length > 1 && (
-                                            <Field label="Game *">
-                                                <select className={inputCls + ' cursor-pointer'} value={squad.game}
-                                                    onChange={e => setSquad(s => ({ ...s, game: e.target.value }))}>
-                                                    <option value="" className="bg-gray-900">-- Select Game --</option>
-                                                    {selectedTournament.supportedGames.map((g: string) => (
-                                                        <option key={g} value={g} className="bg-gray-900">{g}</option>
-                                                    ))}
-                                                </select>
-                                            </Field>
-                                        )}
-                                    </div>
-                                )}
 
                                 <div className="flex items-center justify-between pt-2">
                                     <NavButton icon={RiArrowLeftLine} label="Back" secondary onClick={() => go(1)} disabled={busy} iconLeft />

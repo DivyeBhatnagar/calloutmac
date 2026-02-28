@@ -237,5 +237,55 @@ export const adminService = {
         }
 
         return rows.join('\n');
+    },
+
+    // ============================================================
+    // TOURNAMENT MANAGEMENT
+    // ============================================================
+    async createTournament(data: any) {
+        const {
+            name, description, entryFee, paymentAmount,
+            maxSlots, status, supportedGames, allowedColleges
+        } = data;
+
+        if (!name) throw { statusCode: 400, message: 'Tournament name is required' };
+
+        const newDoc = db.collection('tournaments').doc();
+        const tournamentData = {
+            name,
+            description: description || '',
+            entryFee: entryFee ?? paymentAmount ?? 0,
+            paymentAmount: paymentAmount ?? entryFee ?? 0,
+            maxSlots: maxSlots ?? 0,
+            currentRegistrations: 0,
+            status: status || 'active',
+            supportedGames: Array.isArray(supportedGames) ? supportedGames : [],
+            allowedColleges: Array.isArray(allowedColleges) ? allowedColleges : [],
+            createdAt: admin.firestore.Timestamp.now(),
+            updatedAt: admin.firestore.Timestamp.now()
+        };
+
+        await newDoc.set(tournamentData);
+        return { id: newDoc.id, ...tournamentData };
+    },
+
+    async updateTournament(id: string, data: any) {
+        const tRef = db.collection('tournaments').doc(id);
+        const tDoc = await tRef.get();
+        if (!tDoc.exists) throw { statusCode: 404, message: 'Tournament not found' };
+
+        const updateData: any = { ...data, updatedAt: admin.firestore.Timestamp.now() };
+
+        // Ensure these stay as arrays if provided
+        if (data.supportedGames && !Array.isArray(data.supportedGames)) {
+            throw { statusCode: 400, message: 'supportedGames must be an array' };
+        }
+        if (data.allowedColleges && !Array.isArray(data.allowedColleges)) {
+            throw { statusCode: 400, message: 'allowedColleges must be an array' };
+        }
+
+        await tRef.update(updateData);
+        const updatedDoc = await tRef.get();
+        return { id: updatedDoc.id, ...updatedDoc.data() };
     }
 };

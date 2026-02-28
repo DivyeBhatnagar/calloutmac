@@ -88,3 +88,30 @@ export const exportRegistrationsCSV = async (req: Request, res: Response, next: 
         next(error);
     }
 };
+
+/**
+ * ADMIN: Create Tournament
+ * POST /api/admin/tournaments
+ */
+export const createTournament = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const data = await adminService.createTournament(req.body);
+        sendSuccess(res, 201, 'Tournament created', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * ADMIN: Update Tournament
+ * PATCH /api/admin/tournaments/:id
+ */
+export const updateTournament = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string;
+        const data = await adminService.updateTournament(id, req.body);
+        sendSuccess(res, 200, 'Tournament updated', data);
+    } catch (error) {
+        next(error);
+    }
+};

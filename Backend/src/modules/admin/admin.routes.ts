@@ -6,7 +6,9 @@ import {
     updateUserRole,
     getAdminRegistrations,
     verifyRegistrationPayment,
-    exportRegistrationsCSV
+    exportRegistrationsCSV,
+    createTournament,
+    updateTournament
 } from './admin.controller';
 import { authenticate, authorizeAdmin } from '../../middlewares/auth.middleware';
 
@@ -29,5 +31,9 @@ router.patch('/registrations/:id/verify', verifyRegistrationPayment);
 
 // CSV Export — download all (or filtered) registrations as CSV
 router.get('/registrations/export-csv', exportRegistrationsCSV);
+
+// Tournament Management
+router.post('/tournaments', createTournament);
+router.patch('/tournaments/:id', updateTournament);
 
 export default router;
